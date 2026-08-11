@@ -1,25 +1,32 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import {
-  initialState,
+  createInitialState,
   reduce,
   type Action,
   type Effect,
   type GameState,
 } from '@engine/index';
+import { PIANEROTTOLO, pickTruth } from '@scenarios/pianerottolo';
 
 /**
  * Ponte React <-> engine.
  *
  * React è solo una vista: qui tratteniamo lo stato dell'engine e gli inviamo
- * azioni. L'unico "motore" del tempo è un loop su requestAnimationFrame che
- * emette TICK col delta reale trascorso (soft real-time). Gli `effects`
- * prodotti dal reducer vengono consegnati a un handler esterno.
+ * azioni. Il "motore" del tempo è un loop su requestAnimationFrame che emette
+ * TICK col delta reale trascorso (soft real-time). Il wiring dello scenario
+ * (Pianerottolo) e la scelta della verità vivono qui, nel composition root,
+ * così l'engine resta puro.
  */
 export function useEngine(onEffect?: (effect: Effect, state: GameState) => void) {
-  const [state, dispatch] = useReducer(reduceWithEffects, undefined, () => ({
-    game: initialState(),
-    pending: [] as Effect[],
-  }));
+  const bootstrap = useMemo(
+    () => () => ({
+      game: createInitialState(PIANEROTTOLO, pickTruth()),
+      pending: [] as Effect[],
+    }),
+    [],
+  );
+
+  const [state, dispatch] = useReducer(reduceWithEffects, undefined, bootstrap);
 
   // Handler degli effetti sempre aggiornato senza rilanciare il loop.
   const onEffectRef = useRef(onEffect);
@@ -40,6 +47,10 @@ export function useEngine(onEffect?: (effect: Effect, state: GameState) => void)
     dispatch({ type: '@@action', action });
   }, []);
 
+  const reset = useCallback(() => {
+    dispatch({ type: '@@action', action: { type: 'RESET', truth: pickTruth() } });
+  }, []);
+
   // Loop del tempo reale: finché la partita gira, TICK col delta effettivo.
   const running = state.game.phase === 'running';
   useEffect(() => {
@@ -56,7 +67,7 @@ export function useEngine(onEffect?: (effect: Effect, state: GameState) => void)
     return () => cancelAnimationFrame(frame);
   }, [running]);
 
-  return { state: state.game, send };
+  return { state: state.game, send, reset };
 }
 
 interface Internal {

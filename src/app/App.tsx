@@ -1,30 +1,48 @@
 import { useCallback } from 'react';
-import type { Effect, GameState } from '@engine/index';
+import type { Effect, GameState, ProbeId } from '@engine/index';
 import { StatusBar } from '@ui/StatusBar';
 import { Timer } from '@ui/Timer';
+import { ClueLog } from '@ui/ClueLog';
+import { ActionBar } from '@ui/ActionBar';
+import { Ending } from '@ui/Ending';
 import { useEngine } from './useEngine';
 
 /**
- * M0 — il guscio del finto OS.
- * Schermo nero, status bar in alto, timer al centro che scorre davvero.
- * Nessuna interazione ancora: solo il tempo che passa.
+ * M1 — slice "Pianerottolo".
+ * Il finto OS ora è giocabile: guardi dallo spioncino (−8s) o cerchi in casa
+ * (−20s), gli indizi si accumulano, e quando il tempo finisce si rivela quale
+ * delle tre verità stava davvero accadendo.
  */
 export function App() {
   const onEffect = useCallback((effect: Effect, _state: GameState) => {
-    if (effect.type === 'TIME_UP') {
-      // Al M0 il finale non esiste ancora: il timer resta a 0:00.
-      // Gli slice successivi engancheranno qui la scena di chiusura.
+    if (effect.type === 'HAPTIC' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(effect.pattern === 'end' ? [40, 60, 40] : 12);
     }
   }, []);
 
-  const { state } = useEngine(onEffect);
+  const { state, send, reset } = useEngine(onEffect);
+
+  const onProbe = useCallback(
+    (probe: ProbeId) => send({ type: 'PROBE', probe }),
+    [send],
+  );
+
+  const ended = state.phase === 'ended';
 
   return (
     <main className="os-shell">
       <StatusBar state={state} />
-      <section className="os-screen">
-        <Timer state={state} />
-      </section>
+      {ended ? (
+        <Ending state={state} onRestart={reset} />
+      ) : (
+        <>
+          <section className="os-screen">
+            <Timer state={state} />
+            <ClueLog state={state} />
+          </section>
+          <ActionBar state={state} onProbe={onProbe} />
+        </>
+      )}
     </main>
   );
 }
