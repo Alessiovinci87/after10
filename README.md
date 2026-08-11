@@ -3,11 +3,17 @@
 Thriller/survival mobile da ~10 minuti reali, giocato su un finto sistema
 operativo. Web/PWA installabile su iPhone, giocabile offline.
 
-## Stato: M0 — guscio del finto OS
+## Stato: M1 — slice "Pianerottolo" giocabile
 
-Schermo nero con status bar (`22:41 · batteria 63% · rete debole · porta chiusa`)
-e un timer `10:00` che scorre davvero fino a `0:00`. Nessuna interazione ancora:
-solo il tempo che passa.
+Il finto OS ora si gioca. Sei chiuso in casa, qualcosa è successo sul
+pianerottolo. Puoi **guardare dallo spioncino** (−8s) o **cercare in casa**
+(−20s): gli indizi si accumulano in un registro e il tempo scorre. Quando arriva
+`0:00`, si rivela quale delle **tre verità nascoste** (Blackout / Intrusione /
+Falso allarme) stava davvero accadendo, con una **timeline causale** di cosa hai
+osservato. Leggere non costa tempo; solo le azioni lo consumano (soft real-time).
+
+Batteria visibile che cala; Sicurezza e Conoscenza restano nascoste e guidano
+gli esiti.
 
 ## Architettura
 
@@ -22,13 +28,16 @@ solo il tempo che passa.
 ```
 src/
   engine/      # TS puro: types, reducer, stato iniziale, format
-  ui/          # componenti-vista (StatusBar, Timer) + styles
-  app/         # App + ponte React<->engine (useEngine)
-  scenarios/   # (slice "pianerottolo" nei milestone successivi)
+  ui/          # componenti-vista (StatusBar, Timer, ClueLog, ActionBar, Ending)
+  app/         # App + ponte React<->engine (useEngine, composition root)
+  scenarios/   # slice "pianerottolo": verità, indizi, finali (pura data)
   audio/  save/ # (successivi)
 tests/         # test dell'engine (Vitest)
 scripts/       # generatore icone PWA
 ```
+
+Lo **scenario è pura data** (`src/scenarios/pianerottolo.ts`): l'engine lo
+consulta senza conoscerne il contenuto, così resta generico e riusabile.
 
 ## Sviluppo
 

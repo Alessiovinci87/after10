@@ -1,4 +1,4 @@
-import type { GameState } from './types';
+import type { GameState, Scenario, Truth } from './types';
 
 /** Durata totale della partita in secondi (10:00). */
 export const TOTAL_SECONDS = 600;
@@ -7,12 +7,14 @@ export const TOTAL_SECONDS = 600;
 const START_CLOCK_MINUTES = 22 * 60 + 41;
 
 /**
- * Stato iniziale del M0: schermo nero, status bar a 22:41 · batteria 63% ·
- * rete debole · porta chiusa, e un timer di 10:00 pronto a scorrere.
+ * Stato iniziale generico: l'engine non conosce nessuno scenario in
+ * particolare, glielo passa il driver (composition root) insieme alla verità
+ * scelta. Così l'engine resta puro e riusabile per slice futuri.
  */
-export function initialState(): GameState {
+export function createInitialState(scenario: Scenario, truth: Truth): GameState {
   return {
     phase: 'running',
+    endReason: null,
     resources: {
       secondsRemaining: TOTAL_SECONDS,
       battery: 63,
@@ -22,5 +24,10 @@ export function initialState(): GameState {
     clockMinutes: START_CLOCK_MINUTES,
     door: 'chiusa',
     network: 'debole',
+    truth,
+    scenario,
+    probeCounts: { peep: 0, search: 0 },
+    log: [],
+    nextLogId: 1,
   };
 }
