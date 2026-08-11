@@ -3,17 +3,20 @@
 Thriller/survival mobile da ~10 minuti reali, giocato su un finto sistema
 operativo. Web/PWA installabile su iPhone, giocabile offline.
 
-## Stato: M1 — slice "Pianerottolo" giocabile
+## Stato: M2 — "Pianerottolo" con scene visive e storia che evolve
 
-Il finto OS ora si gioca. Sei chiuso in casa, qualcosa è successo sul
-pianerottolo. Puoi **guardare dallo spioncino** (−8s) o **cercare in casa**
-(−20s): gli indizi si accumulano in un registro e il tempo scorre. Quando arriva
-`0:00`, si rivela quale delle **tre verità nascoste** (Blackout / Intrusione /
-Falso allarme) stava davvero accadendo, con una **timeline causale** di cosa hai
-osservato. Leggere non costa tempo; solo le azioni lo consumano (soft real-time).
+Il finto OS si gioca e ora **respira**. Uno **stage SVG** disegna lo spioncino —
+buio, una sagoma, una torcia che scorre, un'ombra sotto la porta — mentre la
+storia **avanza da sola** in momenti lungo i 10 minuti: anche stando fermo, la
+tensione sale. Le azioni (**Spioncino** −8s, **Cerca in casa** −20s) rivelano il
+dettaglio del momento corrente e **cambiano nel tempo**, così il contenuto non
+si esaurisce. Leggere è gratis; solo le azioni e il tempo consumano secondi
+(soft real-time).
 
-Batteria visibile che cala; Sicurezza e Conoscenza restano nascoste e guidano
-gli esiti.
+A `0:00` si rivela quale delle **tre verità nascoste** (Blackout / Intrusione /
+Falso allarme) stava accadendo, con la **timeline causale** (`causedBy`) che
+intreccia ciò che hai osservato e ciò che è successo da solo. Batteria visibile
+che cala; Sicurezza e Conoscenza restano nascoste.
 
 ## Architettura
 
@@ -27,17 +30,20 @@ gli esiti.
 
 ```
 src/
-  engine/      # TS puro: types, reducer, stato iniziale, format
-  ui/          # componenti-vista (StatusBar, Timer, ClueLog, ActionBar, Ending)
+  engine/      # TS puro: types, reducer, momenti, stato iniziale, format
+  ui/          # viste: StatusBar, SceneStage (SVG), Timer, ClueLog, ActionBar, Ending
   app/         # App + ponte React<->engine (useEngine, composition root)
-  scenarios/   # slice "pianerottolo": verità, indizi, finali (pura data)
+  scenarios/   # slice "pianerottolo": sceneggiatura, verità, finali (pura data)
   audio/  save/ # (successivi)
 tests/         # test dell'engine (Vitest)
 scripts/       # generatore icone PWA
 ```
 
-Lo **scenario è pura data** (`src/scenarios/pianerottolo.ts`): l'engine lo
-consulta senza conoscerne il contenuto, così resta generico e riusabile.
+Lo **scenario è pura data** (`src/scenarios/pianerottolo.ts`): una
+sceneggiatura di *momenti* nel tempo (scena + testo ambientale + cosa rivelano
+le azioni). L'engine la consulta senza conoscerne il contenuto, così resta
+generico e riusabile. Le **scene** sono SVG+CSS (nessuna immagine: leggero e
+offline).
 
 ## Sviluppo
 

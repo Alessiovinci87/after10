@@ -23,6 +23,9 @@ export type Truth = 'blackout' | 'intrusione' | 'falso_allarme';
 /** Azioni "investigative" del giocatore che costano tempo. */
 export type ProbeId = 'peep' | 'search';
 
+/** Scena visiva mostrata dallo stage SVG (segue i momenti della storia). */
+export type SceneId = 'idle' | 'calm' | 'dark' | 'figure' | 'torch' | 'door';
+
 /**
  * Risorse del gioco.
  * Tempo e Batteria sono VISIBILI; Sicurezza e Conoscenza sono NASCOSTE
@@ -46,11 +49,24 @@ export type Phase = 'running' | 'ended';
 export type EndReason = 'time_up';
 
 /**
- * Specifica di un'azione investigativa: quanto costa e cosa rivela.
- * `clues` è indicizzato per verità: la stessa azione racconta cose diverse
- * a seconda di cosa sta davvero succedendo. Ogni ripetizione dell'azione
- * pesca l'indizio successivo della lista.
+ * Un "momento" della storia: si attiva quando il tempo trascorso supera
+ * `atSeconds`. Cambia la scena visibile, aggiunge una riga ambientale al
+ * registro e ridefinisce cosa rivelano le azioni finché è quello corrente.
+ * Così il contenuto evolve col tempo invece di esaurirsi.
  */
+export interface Moment {
+  /** Secondi trascorsi dall'inizio a cui il momento si attiva. */
+  readonly atSeconds: number;
+  readonly scene: SceneId;
+  /** Riga che compare da sola nel registro quando il momento parte. */
+  readonly ambient: string;
+  /** Cosa rivela lo spioncino durante questo momento. */
+  readonly peep: string;
+  /** Cosa rivela la ricerca in casa durante questo momento. */
+  readonly search: string;
+}
+
+/** Costo e resa di un'azione investigativa (i contenuti stanno nei momenti). */
 export interface ProbeSpec {
   readonly id: ProbeId;
   readonly label: string;
@@ -58,11 +74,9 @@ export interface ProbeSpec {
   readonly timeCost: number;
   /** Costo in punti percentuali di batteria. */
   readonly batteryCost: number;
-  /** Quanto fa salire la Conoscenza (nascosta). */
+  /** Quanto fa salire la Conoscenza (nascosta) a ogni nuova scoperta. */
   readonly knowledgeGain: number;
-  /** Indizi per verità, in ordine di rivelazione. */
-  readonly clues: Record<Truth, readonly string[]>;
-  /** Testo mostrato quando non c'è più niente di nuovo da scoprire. */
+  /** Testo quando in questo momento hai già scoperto tutto. */
   readonly exhausted: string;
 }
 
@@ -73,13 +87,16 @@ export interface ProbeSpec {
 export interface Scenario {
   readonly id: string;
   readonly probes: Record<ProbeId, ProbeSpec>;
+  /** La sceneggiatura per ciascuna verità: momenti in ordine di tempo. */
+  readonly script: Record<Truth, readonly Moment[]>;
   /** Testo di chiusura per ciascuna verità, mostrato al finale. */
   readonly endings: Record<Truth, string>;
 }
 
 /**
- * Voce del registro causale: cosa è stato osservato/fatto e quando.
- * `causedBy` collega la conseguenza alla sua causa (per la timeline finale).
+ * Voce del registro causale: cosa è stato osservato/fatto/successo e quando.
+ * `causedBy` collega la conseguenza alla sua causa (per la timeline finale):
+ * un'azione del giocatore, oppure il semplice scorrere del tempo.
  */
 export interface LogEntry {
   readonly id: number;
@@ -103,11 +120,17 @@ export interface GameState {
   readonly network: NetworkState;
   /** La verità nascosta di questa partita. */
   readonly truth: Truth;
-  /** Dati dello scenario in corso (indizi, costi, finali). */
+  /** Dati dello scenario in corso (momenti, costi, finali). */
   readonly scenario: Scenario;
-  /** Quante volte ogni azione è stata eseguita. */
-  readonly probeCounts: Record<ProbeId, number>;
-  /** Registro causale delle cose osservate/fatte. */
+  /** Indice del momento corrente nella sceneggiatura (-1 = non ancora partita). */
+  readonly momentIndex: number;
+  /** Scena visiva corrente. */
+  readonly scene: SceneId;
+  /** Chiavi "probe:momento" già scoperte, per non ripetere gli indizi. */
+  readonly seen: Record<string, boolean>;
+  /** Messaggio transitorio (es. "niente di nuovo"), fuori dal registro. */
+  readonly notice: string | null;
+  /** Registro causale delle cose osservate/fatte/successe. */
   readonly log: readonly LogEntry[];
   /** Contatore monotono per gli id delle voci di log. */
   readonly nextLogId: number;
@@ -130,8 +153,9 @@ export type Action =
  */
 export type Effect =
   | { readonly type: 'TIME_UP' }
-  | { readonly type: 'HAPTIC'; readonly pattern: 'tap' | 'end' }
-  | { readonly type: 'CLUE'; readonly text: string };
+  | { readonly type: 'HAPTIC'; readonly pattern: 'tap' | 'beat' | 'end' }
+  | { readonly type: 'CLUE'; readonly text: string }
+  | { readonly type: 'BEAT'; readonly scene: SceneId };
 
 /** Risultato di ogni riduzione. */
 export interface ReduceResult {

@@ -2,21 +2,23 @@ import { useCallback } from 'react';
 import type { Effect, GameState, ProbeId } from '@engine/index';
 import { StatusBar } from '@ui/StatusBar';
 import { Timer } from '@ui/Timer';
+import { SceneStage } from '@ui/SceneStage';
 import { ClueLog } from '@ui/ClueLog';
 import { ActionBar } from '@ui/ActionBar';
 import { Ending } from '@ui/Ending';
 import { useEngine } from './useEngine';
 
 /**
- * M1 — slice "Pianerottolo".
- * Il finto OS ora è giocabile: guardi dallo spioncino (−8s) o cerchi in casa
- * (−20s), gli indizi si accumulano, e quando il tempo finisce si rivela quale
- * delle tre verità stava davvero accadendo.
+ * M2 — "Pianerottolo" con scene visive e storia che evolve nel tempo.
+ * Uno stage SVG mostra lo spioncino (buio, sagome, torce, ombre sotto la
+ * porta) mentre i momenti della sceneggiatura avanzano da soli. Spioncino
+ * (−8s) e Cerca (−20s) rivelano il dettaglio del momento corrente.
  */
 export function App() {
   const onEffect = useCallback((effect: Effect, _state: GameState) => {
     if (effect.type === 'HAPTIC' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(effect.pattern === 'end' ? [40, 60, 40] : 12);
+      const pattern = effect.pattern === 'end' ? [40, 60, 40] : effect.pattern === 'beat' ? 24 : 12;
+      navigator.vibrate(pattern);
     }
   }, []);
 
@@ -27,22 +29,25 @@ export function App() {
     [send],
   );
 
-  const ended = state.phase === 'ended';
+  if (state.phase === 'ended') {
+    return (
+      <main className="os-shell">
+        <StatusBar state={state} />
+        <Ending state={state} onRestart={reset} />
+      </main>
+    );
+  }
 
   return (
     <main className="os-shell">
       <StatusBar state={state} />
-      {ended ? (
-        <Ending state={state} onRestart={reset} />
-      ) : (
-        <>
-          <section className="os-screen">
-            <Timer state={state} />
-            <ClueLog state={state} />
-          </section>
-          <ActionBar state={state} onProbe={onProbe} />
-        </>
-      )}
+      <div className="stage-wrap">
+        <SceneStage scene={state.scene} />
+        <Timer state={state} />
+      </div>
+      <ClueLog state={state} />
+      {state.notice && <p className="notice">{state.notice}</p>}
+      <ActionBar state={state} onProbe={onProbe} />
     </main>
   );
 }
