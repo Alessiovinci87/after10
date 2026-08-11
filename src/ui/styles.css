@@ -52,7 +52,7 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.4em;
-  padding: 0.9rem 1rem 0.6rem;
+  padding: 0.8rem 1rem 0.5rem;
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
   color: var(--fg-dim);
@@ -63,28 +63,139 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.status-bar__dot {
-  color: var(--fg-dim);
-}
-
-/* ---- Schermo di gioco ---- */
-.os-screen {
-  flex: 1;
+/* ---- Stage visivo ---- */
+.stage-wrap {
+  position: relative;
+  height: 34vh;
+  min-height: 220px;
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 0 1.25rem;
+  align-items: center;
+  justify-content: center;
 }
 
+.stage {
+  width: min(64vw, 240px);
+  aspect-ratio: 1 / 1;
+}
+
+.stage__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Elementi nascosti di default: ogni scena accende i suoi */
+.stage__figure,
+.stage__torch,
+.stage__feet,
+.stage__underdoor {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.stage__frame {
+  opacity: 0.9;
+  transition: opacity 0.9s ease;
+}
+
+/* calm / idle: luce tiepida, pianerottolo normale */
+.stage--calm .stage__frame,
+.stage--idle .stage__frame {
+  opacity: 1;
+}
+
+/* dark: buio che palpita appena */
+.stage--dark .stage__frame {
+  opacity: 0.25;
+}
+.stage--dark .stage__svg {
+  animation: flicker 5s ease-in-out infinite;
+}
+
+/* figure: la sagoma compare e "respira" */
+.stage--figure .stage__figure {
+  opacity: 1;
+  animation: breathe 4.5s ease-in-out infinite;
+  transform-origin: 100px 190px;
+}
+.stage--figure .stage__frame {
+  opacity: 0.4;
+}
+
+/* torch: fascio che scorre e tremola */
+.stage--torch .stage__torch {
+  opacity: 1;
+  animation: sweep 6s ease-in-out infinite, flick 0.16s steps(2, end) infinite;
+}
+.stage--torch .stage__frame {
+  opacity: 0.35;
+}
+
+/* door: ombra e piedi sotto la porta */
+.stage--door .stage__underdoor,
+.stage--door .stage__feet {
+  opacity: 0.9;
+}
+.stage--door .stage__feet {
+  animation: shift 3.5s ease-in-out infinite;
+}
+.stage--door .stage__frame {
+  opacity: 0.6;
+}
+
+@keyframes sweep {
+  0%,
+  100% {
+    transform: translate(-46px, 22px);
+  }
+  50% {
+    transform: translate(46px, -18px);
+  }
+}
+@keyframes flick {
+  50% {
+    opacity: 0.82;
+  }
+}
+@keyframes breathe {
+  50% {
+    transform: scale(1.03);
+  }
+}
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+  52% {
+    opacity: 1;
+  }
+}
+@keyframes shift {
+  50% {
+    transform: translateX(6px);
+  }
+}
+
+/* Timer sovrapposto allo stage, in alto a destra */
 .timer {
-  align-self: center;
-  padding: 0.4rem 0 0.8rem;
-  font-size: clamp(2.75rem, 15vw, 4.5rem);
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
   font-weight: 200;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
   transition: color 0.4s ease;
+  text-shadow: 0 0 12px #000, 0 0 4px #000;
 }
 
 .timer--urgent {
@@ -94,7 +205,7 @@ body {
 
 @keyframes pulse {
   50% {
-    opacity: 0.55;
+    opacity: 0.5;
   }
 }
 
@@ -106,8 +217,8 @@ body {
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 0.5rem 0 1rem;
+  gap: 0.8rem;
+  padding: 0.75rem 1.25rem 0.5rem;
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -126,8 +237,16 @@ body {
 }
 
 .clue-log__line {
-  color: var(--fg);
   animation: fade-in 0.5s ease both;
+}
+
+/* Osservazioni tue: piene. Eventi del tempo: più tenui, in corsivo. */
+.clue-log__line--act {
+  color: var(--fg);
+}
+.clue-log__line--time {
+  color: var(--fg-mid);
+  font-style: italic;
 }
 
 .clue-log__time {
@@ -142,6 +261,15 @@ body {
     opacity: 0;
     transform: translateY(6px);
   }
+}
+
+/* ---- Avviso transitorio ---- */
+.notice {
+  padding: 0 1.25rem 0.4rem;
+  color: var(--fg-dim);
+  font-size: 0.9rem;
+  font-style: italic;
+  animation: fade-in 0.3s ease both;
 }
 
 /* ---- Barra azioni ---- */

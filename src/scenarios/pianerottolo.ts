@@ -1,15 +1,131 @@
-import type { Scenario, Truth } from '@engine/index';
+import type { Moment, Scenario, Truth } from '@engine/index';
 
 /**
  * Slice "Pianerottolo".
  *
  * Stessa situazione — sei chiuso in casa, qualcosa è appena successo sul
- * pianerottolo — ma tre verità diverse la spiegano. Le azioni investigative
- * (spioncino, cerca) raccontano dettagli coerenti con la verità in corso;
- * ripetere un'azione pesca l'indizio successivo, finché non resta nulla.
+ * pianerottolo — ma tre verità diverse la spiegano. La partita è una
+ * SCENEGGIATURA: lungo i 10 minuti si attivano dei "momenti" che cambiano la
+ * scena e ridefiniscono cosa raccontano le azioni. Il tempo lavora da solo:
+ * anche senza fare nulla, la tensione avanza.
  *
  * È pura DATA: l'engine la consulta senza sapere cosa contiene.
  */
+
+const blackout: readonly Moment[] = [
+  {
+    atSeconds: 0,
+    scene: 'dark',
+    ambient: 'Le luci del palazzo si spengono di colpo. Buio.',
+    peep: 'Dallo spioncino: nero totale. Anche la luce di emergenza è morta.',
+    search: 'Il contatore è scattato. La leva non risale.',
+  },
+  {
+    atSeconds: 110,
+    scene: 'torch',
+    ambient: 'In fondo alle scale si accende una torcia. Sale.',
+    peep: 'Una sagoma con torcia sale piano. Sembra il vicino del quarto.',
+    search: 'La radio a pile gracchia: “…interruzione sulla linea est…”.',
+  },
+  {
+    atSeconds: 240,
+    scene: 'figure',
+    ambient: 'I passi si fermano sul tuo pianerottolo.',
+    peep: 'La torcia è ferma davanti alla porta di fronte. Bussano lì, non da te.',
+    search: 'Trovi la tua torcia nel cassetto. Funziona. Almeno quello.',
+  },
+  {
+    atSeconds: 400,
+    scene: 'torch',
+    ambient: 'I passi riprendono e si allontanano verso l’alto.',
+    peep: 'La torcia sale al piano di sopra. Una porta si apre e si chiude.',
+    search: 'Dalla finestra: metà quartiere è al buio. Non sei solo.',
+  },
+  {
+    atSeconds: 540,
+    scene: 'dark',
+    ambient: 'Silenzio pieno. Solo il ronzio del nulla.',
+    peep: 'Buio e basta. Nessuno.',
+    search: 'Niente da fare se non aspettare che torni la corrente.',
+  },
+];
+
+const intrusione: readonly Moment[] = [
+  {
+    atSeconds: 0,
+    scene: 'calm',
+    ambient: 'Un colpo secco fuori dalla porta. Poi silenzio.',
+    peep: 'Pianerottolo vuoto. Ma la lampadina del corridoio è stata svitata.',
+    search: 'La porta di servizio in cucina è accostata. Tu l’avevi chiusa.',
+  },
+  {
+    atSeconds: 100,
+    scene: 'figure',
+    ambient: 'Un’ombra si sposta appena oltre lo spioncino.',
+    peep: 'Un guanto sul terzo gradino. Non era lì stamattina.',
+    search: 'Sul davanzale interno c’è un segno di scarpa. Bagnato.',
+  },
+  {
+    atSeconds: 230,
+    scene: 'door',
+    ambient: 'La maniglia della tua porta si abbassa. Piano. Risale.',
+    peep: 'Qualcuno è fermo a sinistra dello spioncino. Lo senti respirare.',
+    search: 'Chiamata persa delle 22:39, da un numero senza prefisso.',
+  },
+  {
+    atSeconds: 380,
+    scene: 'door',
+    ambient: 'Tre colpi alla porta. Lenti. Poi più niente.',
+    peep: 'Nessuno, ora. Ma il tuo zerbino è spostato di traverso.',
+    search: 'Il coltello del pane non è nel ceppo. Lo prendi in mano.',
+  },
+  {
+    atSeconds: 530,
+    scene: 'figure',
+    ambient: 'Lo spioncino si oscura. Qualcosa lo copre dall’esterno.',
+    peep: 'Nero. Poi una fessura di luce: un occhio?',
+    search: 'Ti barrichi contro la porta. È tutto quello che puoi fare.',
+  },
+];
+
+const falso_allarme: readonly Moment[] = [
+  {
+    atSeconds: 0,
+    scene: 'calm',
+    ambient: 'Un tonfo in corridoio ti gela il sangue.',
+    peep: 'Dallo spioncino: tutto normale. Luce accesa, tappetino a posto.',
+    search: 'Era un quadro caduto in corridoio. Il chiodo ha ceduto.',
+  },
+  {
+    atSeconds: 110,
+    scene: 'calm',
+    ambient: 'Il frigo riparte con un ronzio. Il cuore ti rallenta un po’.',
+    peep: 'Il rumore di prima era il portone a molla di sotto, con le correnti.',
+    search: 'Hai lasciato la TV in stand-by. Tutto qui.',
+  },
+  {
+    atSeconds: 250,
+    scene: 'calm',
+    ambient: 'Passi sulle scale — normali. La vicina rientra.',
+    peep: 'La vicina entra in casa con le buste. Ti saluta senza vederti.',
+    search: 'Messaggio non letto: “Scusa il casino, ho spostato gli scatoloni.”',
+  },
+  {
+    atSeconds: 400,
+    scene: 'idle',
+    ambient: 'Il palazzo respira tranquillo. Tubi, un cane lontano.',
+    peep: 'Pianerottolo deserto e illuminato. Niente.',
+    search: 'Controlli di nuovo: niente di strano. Proprio niente.',
+  },
+  {
+    atSeconds: 540,
+    scene: 'idle',
+    ambient: 'Ti senti quasi stupido per la paura. Quasi.',
+    peep: 'Nulla, come sempre.',
+    search: 'Hai guardato tre volte. Va tutto bene. Resta la paura, però.',
+  },
+];
+
 export const PIANEROTTOLO: Scenario = {
   id: 'pianerottolo',
   probes: {
@@ -19,24 +135,7 @@ export const PIANEROTTOLO: Scenario = {
       timeCost: 8,
       batteryCost: 1,
       knowledgeGain: 8,
-      clues: {
-        blackout: [
-          'Dallo spioncino: buio totale sul pianerottolo. La luce di emergenza è spenta.',
-          'Una sagoma con una torcia sale le scale, lenta. Sembra il vicino del quarto.',
-          'La torcia si allontana verso l’alto. Nessuno si è fermato alla tua porta.',
-        ],
-        intrusione: [
-          'Dallo spioncino: il pianerottolo è vuoto, ma la luce del corridoio è stata svitata.',
-          'C’è un guanto sul terzo gradino. Non era lì stamattina.',
-          'Un’ombra si sposta appena fuori campo, a sinistra dello spioncino. Respira.',
-        ],
-        falso_allarme: [
-          'Dallo spioncino: tutto normale. La luce è accesa, il tappetino al suo posto.',
-          'Il rumore era il portone a molla del piano di sotto che sbatte con le correnti.',
-          'La vicina rientra con le buste della spesa. Ti saluta senza vederti.',
-        ],
-      },
-      exhausted: 'Guardi ancora, ma non c’è altro da vedere allo spioncino.',
+      exhausted: 'Guardi ancora, ma per ora non c’è altro da vedere.',
     },
     search: {
       id: 'search',
@@ -44,30 +143,17 @@ export const PIANEROTTOLO: Scenario = {
       timeCost: 20,
       batteryCost: 2,
       knowledgeGain: 14,
-      clues: {
-        blackout: [
-          'Cerchi in casa: il contatore è scattato. Metà quartiere è al buio dalla finestra.',
-          'La radio a pile gracchia: “…interruzione sulla linea est, tecnici in arrivo…”.',
-          'Trovi la torcia nel cassetto. Funziona. Almeno quello.',
-        ],
-        intrusione: [
-          'Cerchi in casa: la porta di servizio in cucina è accostata. Tu l’avevi chiusa.',
-          'Sul davanzale interno c’è un segno di scarpa. Bagnato.',
-          'Il tuo telefono ha una chiamata persa da un numero senza prefisso, delle 22:39.',
-        ],
-        falso_allarme: [
-          'Cerchi in casa: niente di strano. Hai solo lasciato la TV in stand-by.',
-          'Il “colpo” era un quadro caduto in corridoio. Il chiodo ha ceduto.',
-          'Un messaggio non letto: “Scusa il casino di prima, ho spostato gli scatoloni.”',
-        ],
-      },
-      exhausted: 'Hai già rovistato ovunque. Non salta fuori altro.',
+      exhausted: 'Hai già controllato tutto. Per ora niente di nuovo.',
     },
   },
+  script: { blackout, intrusione, falso_allarme },
   endings: {
-    blackout: 'Era un blackout. Le scale erano solo buie, non pericolose. Hai passato dieci minuti a temere il nulla — o forse hai fatto bene a non uscire.',
-    intrusione: 'Qualcuno era davvero là fuori. Ogni secondo speso a capirlo era un secondo tolto alla fuga. Le 22:51 arrivano comunque.',
-    falso_allarme: 'Falso allarme. Nessun pericolo, mai stato. Resta la domanda: quanto sei disposto a spaventarti per un quadro che cade?',
+    blackout:
+      'Era un blackout. Le scale erano solo buie, non pericolose. Hai passato dieci minuti a temere il nulla — o forse hai fatto bene a non uscire.',
+    intrusione:
+      'Qualcuno era davvero là fuori. Ogni secondo speso a capirlo era un secondo tolto alla fuga. Le 22:51 arrivano comunque.',
+    falso_allarme:
+      'Falso allarme. Nessun pericolo, mai stato. Resta la domanda: quanto sei disposto a spaventarti per un quadro che cade?',
   },
 };
 

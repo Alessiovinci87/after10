@@ -4,7 +4,7 @@ import type { GameState, Scenario, Truth } from './types';
 export const TOTAL_SECONDS = 600;
 
 /** 22:41 diegetico = 22*60 + 41 minuti dalla mezzanotte. */
-const START_CLOCK_MINUTES = 22 * 60 + 41;
+export const START_CLOCK_MINUTES = 22 * 60 + 41;
 
 /**
  * Stato iniziale generico: l'engine non conosce nessuno scenario in
@@ -26,7 +26,10 @@ export function createInitialState(scenario: Scenario, truth: Truth): GameState 
     network: 'debole',
     truth,
     scenario,
-    probeCounts: { peep: 0, search: 0 },
+    momentIndex: -1,
+    scene: 'idle',
+    seen: {},
+    notice: null,
     log: [],
     nextLogId: 1,
   };

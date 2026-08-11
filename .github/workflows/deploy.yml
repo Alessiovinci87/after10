@@ -27,6 +27,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -34,6 +35,10 @@ jobs:
 
   deploy:
     needs: build
+    # Il deploy pubblica solo da main: l'ambiente github-pages autorizza il
+    # solo branch di default. Sui branch di lavoro gira la build (verifica) e
+    # il deploy viene saltato — niente falsi "fallimenti" via email.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -6,6 +6,7 @@ export type {
   EndReason,
   GameState,
   LogEntry,
+  Moment,
   NetworkState,
   Phase,
   ProbeId,
@@ -13,8 +14,9 @@ export type {
   ReduceResult,
   Resources,
   Scenario,
+  SceneId,
   Truth,
 } from './types';
 export { reduce } from './reducer';
-export { createInitialState, TOTAL_SECONDS } from './state';
+export { createInitialState, START_CLOCK_MINUTES, TOTAL_SECONDS } from './state';
 export { formatClock, formatTimer } from './format';
