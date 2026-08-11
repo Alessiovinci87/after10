@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { SceneId } from '@engine/index';
 
 /**
@@ -5,8 +6,11 @@ import type { SceneId } from '@engine/index';
  * Tutto è SVG + CSS (nessuna immagine, resta leggero e offline). La scena
  * segue i momenti della storia: buio, una sagoma, una torcia che scorre,
  * un'ombra sotto la porta.
+ *
+ * Memoizzato: dipende solo da `scene`, così i tick del timer non lo
+ * ridisegnano (le animazioni sono CSS e vanno avanti da sole).
  */
-export function SceneStage({ scene }: { scene: SceneId }) {
+export const SceneStage = memo(function SceneStage({ scene }: { scene: SceneId }) {
   return (
     <div className={`stage stage--${scene}`} aria-hidden="true">
       <svg viewBox="0 0 200 200" className="stage__svg" preserveAspectRatio="xMidYMid slice">
@@ -75,4 +79,4 @@ export function SceneStage({ scene }: { scene: SceneId }) {
       </svg>
     </div>
   );
-}
+});

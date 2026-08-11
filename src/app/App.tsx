@@ -45,9 +45,9 @@ export function App() {
         <SceneStage scene={state.scene} />
         <Timer state={state} />
       </div>
-      <ClueLog state={state} />
+      <ClueLog log={state.log} />
       {state.notice && <p className="notice">{state.notice}</p>}
-      <ActionBar state={state} onProbe={onProbe} />
+      <ActionBar probes={state.scenario.probes} onProbe={onProbe} />
     </main>
   );
 }

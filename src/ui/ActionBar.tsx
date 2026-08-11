@@ -1,22 +1,26 @@
-import type { GameState, ProbeId } from '@engine/index';
+import { memo } from 'react';
+import type { ProbeId, ProbeSpec } from '@engine/index';
 
 const PROBE_ORDER: readonly ProbeId[] = ['peep', 'search'];
 
 /**
  * Le azioni del giocatore. Ognuna costa tempo (mostrato in etichetta) e un po'
  * di batteria. Non si disabilitano: la scelta di "spendere secondi" è il gioco.
+ *
+ * Memoizzato: le specifiche delle azioni non cambiano coi tick, quindi la barra
+ * non si ridisegna mentre scorre il tempo — i tap restano immediati.
  */
-export function ActionBar({
-  state,
+export const ActionBar = memo(function ActionBar({
+  probes,
   onProbe,
 }: {
-  state: GameState;
+  probes: Record<ProbeId, ProbeSpec>;
   onProbe: (probe: ProbeId) => void;
 }) {
   return (
     <nav className="action-bar" aria-label="Azioni">
       {PROBE_ORDER.map((id) => {
-        const spec = state.scenario.probes[id];
+        const spec = probes[id];
         return (
           <button
             key={id}
@@ -31,4 +35,4 @@ export function ActionBar({
       })}
     </nav>
   );
-}
+});

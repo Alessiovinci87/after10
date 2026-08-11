@@ -51,16 +51,27 @@ export function useEngine(onEffect?: (effect: Effect, state: GameState) => void)
     dispatch({ type: '@@action', action: { type: 'RESET', truth: pickTruth() } });
   }, []);
 
-  // Loop del tempo reale: finché la partita gira, TICK col delta effettivo.
+  // Loop del tempo reale. Le animazioni sono CSS (indipendenti da React),
+  // quindi non serve aggiornare lo stato a 60fps: accumuliamo il tempo reale
+  // ed emettiamo un TICK ogni ~STEP_MS. Meno re-render = tap reattivi, e il
+  // tempo resta accurato perché il TICK porta il delta realmente trascorso.
+  // Il delta è limitato: se l'app va in background, il timer di fatto si mette
+  // in pausa invece di fare un salto al ritorno.
   const running = state.game.phase === 'running';
   useEffect(() => {
     if (!running) return;
+    const STEP_MS = 250;
+    const MAX_DELTA_MS = 1000;
     let frame = 0;
     let last = performance.now();
+    let acc = 0;
     const loop = (now: number) => {
-      const deltaMs = now - last;
+      acc += Math.min(now - last, MAX_DELTA_MS);
       last = now;
-      dispatch({ type: '@@action', action: { type: 'TICK', deltaMs } });
+      if (acc >= STEP_MS) {
+        dispatch({ type: '@@action', action: { type: 'TICK', deltaMs: acc } });
+        acc = 0;
+      }
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
