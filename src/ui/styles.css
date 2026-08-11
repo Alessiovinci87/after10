@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --fg: #e8e8ea;
+  --fg-dim: #6c6c72;
+  --urgent: #ff3b30;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI',
+    Roboto, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  /* Blocca il pull-to-refresh / bounce su Safari iOS. */
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.os-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  /* Rispetta il notch / la home indicator. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  padding: 0.9rem 1rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--fg-dim);
+}
+
+.status-bar__clock {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar__dot {
+  color: var(--fg-dim);
+}
+
+.os-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer {
+  font-size: clamp(3.5rem, 22vw, 7rem);
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  transition: color 0.4s ease;
+}
+
+.timer--urgent {
+  color: var(--urgent);
+  animation: pulse 1s steps(1, end) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
