@@ -1,6 +1,5 @@
 import type {
   Action,
-  Beat,
   Effect,
   GameState,
   LogEntry,
@@ -31,48 +30,40 @@ export function reduce(state: GameState, action: Action): ReduceResult {
   }
 }
 
-/**
- * Applica un beat: aggiorna scena, immagine e umore, aggiunge la riga al
- * registro (così testo e immagine restano allineati) e produce gli effetti
- * (vibrazione in base all'umore). Cuore condiviso tra tempo e azioni.
- */
-function applyBeat(
+/** Aggiunge una riga al registro aggiornando scena/immagine/umore (se dati). */
+function pushLine(
   state: GameState,
-  beat: Beat,
+  text: string,
   causedBy: ProbeId | 'time',
+  mood: Mood,
+  scene = state.scene,
+  image = state.image,
 ): { state: GameState; effects: Effect[] } {
   const entry: LogEntry = {
     id: state.nextLogId,
     atMinutes: state.clockMinutes,
-    text: beat.text,
+    text,
     causedBy,
-    mood: beat.mood,
+    mood,
   };
-  const next: GameState = {
-    ...state,
-    scene: beat.scene,
-    image: beat.image ?? state.image,
-    mood: beat.mood,
-    notice: null,
-    log: [...state.log, entry],
-    nextLogId: state.nextLogId + 1,
+  return {
+    state: {
+      ...state,
+      scene,
+      image,
+      mood,
+      log: [...state.log, entry],
+      nextLogId: state.nextLogId + 1,
+    },
+    effects: [
+      { type: 'BEAT', scene, mood },
+      { type: 'HAPTIC', pattern: mood === 'panic' ? 'beat' : 'tap' },
+      { type: 'CLUE', text },
+    ],
   };
-  const effects: Effect[] = [
-    { type: 'BEAT', scene: beat.scene, mood: beat.mood },
-    { type: 'HAPTIC', pattern: hapticFor(beat.mood) },
-    { type: 'CLUE', text: beat.text },
-  ];
-  return { state: next, effects };
 }
 
-function hapticFor(mood: Mood): 'tap' | 'beat' {
-  return mood === 'panic' ? 'beat' : 'tap';
-}
-
-/**
- * Soft real-time: il clock scorre, la batteria cala e i beat a tempo scattano
- * quando il tempo li raggiunge (atmosfera che avanza anche senza agire).
- */
+/** Soft real-time: clock, batteria e avanzamento degli stadi a tempo. */
 function tick(state: GameState, deltaMs: number): ReduceResult {
   if (state.phase !== 'running' || deltaMs <= 0) {
     return { state, effects: [] };
@@ -90,26 +81,27 @@ function tick(state: GameState, deltaMs: number): ReduceResult {
     resources: { ...state.resources, secondsRemaining, battery },
   };
 
-  const advanced = advanceMoments(moved);
+  const advanced = advanceStages(moved);
   const ended = maybeEnd(advanced.state);
   return { state: ended.state, effects: [...advanced.effects, ...ended.effects] };
 }
 
-/** Attiva tutti i beat a tempo il cui istante è stato raggiunto. */
-function advanceMoments(state: GameState): ReduceResult {
+/** Attiva gli stadi il cui istante è stato raggiunto (atmosfera che avanza). */
+function advanceStages(state: GameState): ReduceResult {
   const elapsed = TOTAL_SECONDS - state.resources.secondsRemaining;
-  const script = state.scenario.script[state.truth];
+  const stages = state.scenario.stages[state.truth];
 
   let s = state;
   const effects: Effect[] = [];
 
   while (
-    s.momentIndex + 1 < script.length &&
-    (script[s.momentIndex + 1]?.atSeconds ?? Infinity) <= elapsed
+    s.stageIndex + 1 < stages.length &&
+    (stages[s.stageIndex + 1]?.atSeconds ?? Infinity) <= elapsed
   ) {
-    const moment = script[s.momentIndex + 1];
-    if (!moment) break;
-    const applied = applyBeat({ ...s, momentIndex: s.momentIndex + 1 }, moment, 'time');
+    const stage = stages[s.stageIndex + 1];
+    if (!stage) break;
+    const moved: GameState = { ...s, stageIndex: s.stageIndex + 1 };
+    const applied = pushLine(moved, stage.ambient, 'time', stage.mood, stage.scene, stage.image ?? moved.image);
     s = applied.state;
     effects.push(...applied.effects);
   }
@@ -118,8 +110,9 @@ function advanceMoments(state: GameState): ReduceResult {
 }
 
 /**
- * Azione investigativa: costa tempo e batteria, può far scattare beat a tempo,
- * poi rivela il beat successivo della propria coda (immagine + testo allineati).
+ * Azione investigativa: costa tempo e batteria, aggiorna gli stadi a tempo, poi
+ * riporta lo STATO ATTUALE della minaccia. Se in questo stadio l'hai già visto,
+ * dà una riga di tensione (che varia) invece di un vicolo cieco.
  */
 function probe(state: GameState, probeId: ProbeId): ReduceResult {
   if (state.phase !== 'running') {
@@ -134,34 +127,38 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
     ...state,
     clockMinutes: minutesFromRemaining(secondsRemaining),
     resources: { ...state.resources, secondsRemaining, battery },
-    notice: null,
   };
 
-  const advanced = advanceMoments(afterCost);
+  const advanced = advanceStages(afterCost);
   const s = advanced.state;
+  const preEffects: Effect[] = [...advanced.effects];
 
-  const queue = s.scenario.reveals[s.truth][probeId];
-  const cursor = s.probeCounts[probeId];
-  const preEffects: Effect[] = [{ type: 'HAPTIC', pattern: 'tap' }, ...advanced.effects];
-
-  if (cursor >= queue.length) {
-    return { state: { ...s, notice: spec.exhausted }, effects: preEffects };
+  const stages = s.scenario.stages[s.truth];
+  const idx = Math.max(0, s.stageIndex);
+  const stage = stages[idx];
+  if (!stage) {
+    return { state: s, effects: [...preEffects, { type: 'HAPTIC', pattern: 'tap' }] };
   }
 
-  const beat = queue[cursor];
-  if (!beat) {
-    return { state: s, effects: preEffects };
-  }
+  const key = `${probeId}:${idx}`;
+  const firstTimeHere = !s.seen[key];
 
-  const applied = applyBeat(
-    {
+  let applied;
+  if (firstTimeHere) {
+    // Stato attuale della minaccia in questo stadio (sostanziale).
+    const text = probeId === 'peep' ? stage.peep : stage.search;
+    const withKnowledge: GameState = {
       ...s,
+      seen: { ...s.seen, [key]: true },
       resources: { ...s.resources, knowledge: s.resources.knowledge + spec.knowledgeGain },
-      probeCounts: { ...s.probeCounts, [probeId]: cursor + 1 },
-    },
-    beat,
-    probeId,
-  );
+    };
+    applied = pushLine(withKnowledge, text, probeId, stage.mood, stage.scene, stage.image ?? s.image);
+  } else {
+    // Già controllato in questo stadio: riga di tensione che varia (mai vuoto).
+    const pool = s.scenario.filler[s.mood];
+    const text = pool[s.nextLogId % pool.length] ?? '…';
+    applied = pushLine(s, text, probeId, s.mood);
+  }
 
   const ended = maybeEnd(applied.state);
   return { state: ended.state, effects: [...preEffects, ...applied.effects, ...ended.effects] };

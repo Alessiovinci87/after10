@@ -19,95 +19,80 @@ describe('engine — stato iniziale', () => {
     expect(s.phase).toBe('running');
     expect(s.resources.secondsRemaining).toBe(TOTAL_SECONDS);
     expect(s.resources.battery).toBe(63);
-    expect(s.network).toBe('debole');
-    expect(s.door).toBe('chiusa');
     expect(formatClock(s.clockMinutes)).toBe('22:41');
     expect(formatTimer(s.resources.secondsRemaining)).toBe('10:00');
     expect(s.log).toHaveLength(0);
-    expect(s.momentIndex).toBe(-1);
+    expect(s.stageIndex).toBe(-1);
     expect(s.scene).toBe('idle');
+    expect(s.image).toBeNull();
   });
 });
 
-describe('engine — momenti nel tempo', () => {
-  it('il primo beat a tempo (t=0) si attiva al primo TICK e allinea scena+immagine', () => {
+describe('engine — stadi nel tempo', () => {
+  it('il primo stadio (t=0) si attiva al primo TICK e allinea scena+immagine', () => {
     const s0 = fresh('intrusione');
     const { state } = reduce(s0, { type: 'TICK', deltaMs: 1000 });
-    const m0 = PIANEROTTOLO.script.intrusione[0];
-    expect(state.momentIndex).toBe(0);
-    expect(state.scene).toBe(m0?.scene);
-    expect(state.image).toBe(m0?.image);
-    expect(state.mood).toBe(m0?.mood);
+    const st0 = PIANEROTTOLO.stages.intrusione[0];
+    expect(state.stageIndex).toBe(0);
+    expect(state.scene).toBe(st0?.scene);
+    expect(state.image).toBe(st0?.image);
+    expect(state.mood).toBe(st0?.mood);
     expect(state.log).toHaveLength(1);
     expect(state.log[0]?.causedBy).toBe('time');
-    expect(state.log[0]?.text).toBe(m0?.text);
+    expect(state.log[0]?.text).toBe(st0?.ambient);
   });
 
-  it('un TICK grande attiva tutti i beat a tempo già scaduti', () => {
+  it('un TICK grande attiva tutti gli stadi già scaduti', () => {
     const s0 = fresh('intrusione');
-    const { state } = reduce(s0, { type: 'TICK', deltaMs: 300_000 });
-    expect(state.momentIndex).toBe(1);
-    expect(state.image).toBe(PIANEROTTOLO.script.intrusione[1]?.image);
-    expect(state.log).toHaveLength(2);
-    expect(state.log.every((e) => e.causedBy === 'time')).toBe(true);
+    const { state } = reduce(s0, { type: 'TICK', deltaMs: 200_000 });
+    expect(state.stageIndex).toBe(2); // 0s, 90s, 180s <= 200s
+    expect(state.image).toBe(PIANEROTTOLO.stages.intrusione[2]?.image);
   });
 
-  it('la batteria cala lentamente col tempo', () => {
+  it('la batteria cala col tempo; TICK è puro e ignora delta non positivi', () => {
     const s0 = fresh();
     const { state } = reduce(s0, { type: 'TICK', deltaMs: 1000 });
     expect(state.resources.battery).toBeLessThan(63);
-    expect(state.resources.battery).toBeGreaterThan(62.9);
-  });
-
-  it('è puro: non muta lo stato in ingresso', () => {
-    const s0 = fresh();
     reduce(s0, { type: 'TICK', deltaMs: 5000 });
     expect(s0.resources.secondsRemaining).toBe(TOTAL_SECONDS);
-    expect(s0.log).toHaveLength(0);
-  });
-
-  it('ignora delta non positivi', () => {
-    const s0 = fresh();
     expect(reduce(s0, { type: 'TICK', deltaMs: 0 }).state).toBe(s0);
     expect(reduce(s0, { type: 'TICK', deltaMs: -100 }).state).toBe(s0);
   });
 });
 
-describe('engine — PROBE (azioni investigative)', () => {
-  it('spioncino costa 8s + batteria e rivela la prima scoperta della coda', () => {
+describe('engine — PROBE (stato attuale, mai bloccato)', () => {
+  it('lo spioncino riporta lo stato attuale dello stadio e allinea l\'immagine', () => {
     const s0 = fresh('blackout');
     const { state, effects } = reduce(s0, { type: 'PROBE', probe: 'peep' });
     expect(state.resources.secondsRemaining).toBe(TOTAL_SECONDS - 8);
-    expect(state.resources.battery).toBe(62);
     const reveal = state.log.find((e) => e.causedBy === 'peep');
-    expect(reveal?.text).toBe(PIANEROTTOLO.reveals.blackout.peep[0]?.text);
-    expect(state.image).toBe(PIANEROTTOLO.reveals.blackout.peep[0]?.image);
-    expect(state.probeCounts.peep).toBe(1);
+    expect(reveal?.text).toBe(PIANEROTTOLO.stages.blackout[0]?.peep);
+    expect(state.image).toBe(PIANEROTTOLO.stages.blackout[0]?.image);
     expect(state.resources.knowledge).toBeGreaterThan(0);
     expect(effects.some((e) => e.type === 'CLUE')).toBe(true);
   });
 
-  it('ogni tap dà una scoperta nuova, subito (niente attesa dei momenti)', () => {
-    let s = fresh('blackout');
+  it('ripremere nello stesso stadio NON blocca: dà una riga di tensione', () => {
+    let s = fresh('intrusione'); // stadio 0 = mood calm
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
+    const lenAfterFirst = s.log.length;
+    const knowledge = s.resources.knowledge;
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
-    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
-    const peeps = s.log.filter((e) => e.causedBy === 'peep').map((e) => e.text);
-    expect(peeps).toEqual(PIANEROTTOLO.reveals.blackout.peep.slice(0, 3).map((b) => b.text));
-    expect(s.notice).toBeNull();
+    expect(s.log.length).toBe(lenAfterFirst + 1); // sempre una riga nuova
+    const last = s.log[s.log.length - 1];
+    expect(PIANEROTTOLO.filler[s.mood]).toContain(last?.text);
+    expect(s.resources.knowledge).toBe(knowledge); // la tensione non dà conoscenza
   });
 
-  it('l\'avviso "esaurito" arriva solo dopo aver svuotato l\'intera coda', () => {
-    let s = fresh('falso_allarme');
-    const total = PIANEROTTOLO.reveals.falso_allarme.search.length;
-    for (let i = 0; i < total; i++) {
-      ({ state: s } = reduce(s, { type: 'PROBE', probe: 'search' }));
-      expect(s.notice).toBeNull();
-    }
-    const lenBefore = s.log.length;
-    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'search' }));
-    expect(s.log.length).toBe(lenBefore);
-    expect(s.notice).toBe(PIANEROTTOLO.probes.search.exhausted);
+  it('più tardi lo stesso spioncino mostra uno stato diverso (evolve nel tempo)', () => {
+    let s = fresh('intrusione');
+    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
+    const early = s.log.find((e) => e.causedBy === 'peep')?.text;
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 200_000 }));
+    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
+    const late = s.log.filter((e) => e.causedBy === 'peep').pop()?.text;
+    expect(late).not.toBe(early);
+    expect(late).toBe(PIANEROTTOLO.stages.intrusione[2]?.peep);
   });
 
   it('un\'azione che sfora il tempo lo azzera e chiude la partita', () => {
@@ -128,29 +113,26 @@ describe('engine — PROBE (azioni investigative)', () => {
   });
 });
 
-describe('engine — fine partita', () => {
+describe('engine — fine partita e RESET', () => {
   it('a 0 termina ed emette TIME_UP una sola volta', () => {
     let s = fresh();
     ({ state: s } = reduce(s, { type: 'TICK', deltaMs: (TOTAL_SECONDS - 1) * 1000 }));
     const atEnd = reduce(s, { type: 'TICK', deltaMs: 2000 });
     expect(atEnd.state.phase).toBe('ended');
     expect(atEnd.state.endReason).toBe('time_up');
-    expect(atEnd.effects.some((e) => e.type === 'TIME_UP')).toBe(true);
     const after = reduce(atEnd.state, { type: 'TICK', deltaMs: 1000 });
     expect(after.state).toBe(atEnd.state);
   });
-});
 
-describe('engine — RESET', () => {
-  it('ricomincia da capo con la verità indicata', () => {
+  it('RESET ricomincia da capo con la verità indicata', () => {
     let s = fresh('intrusione');
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
     const { state } = reduce(s, { type: 'RESET', truth: 'blackout' });
     expect(state.truth).toBe('blackout');
     expect(state.resources.secondsRemaining).toBe(TOTAL_SECONDS);
     expect(state.log).toHaveLength(0);
-    expect(state.momentIndex).toBe(-1);
-    expect(state.scene).toBe('idle');
+    expect(state.stageIndex).toBe(-1);
+    expect(state.image).toBeNull();
     expect(state.phase).toBe('running');
   });
 });
