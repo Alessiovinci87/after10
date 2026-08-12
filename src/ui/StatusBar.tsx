@@ -1,4 +1,4 @@
-import { formatClock, type GameState } from '@engine/index';
+import { formatClock, LOW_BATTERY, type GameState } from '@engine/index';
 
 const NETWORK_LABEL: Record<GameState['network'], string> = {
   assente: 'rete assente',
@@ -21,7 +21,9 @@ export function StatusBar({ state }: { state: GameState }) {
     <header className="status-bar" role="status" aria-live="off">
       <span className="status-bar__clock">{formatClock(state.clockMinutes)}</span>
       <span className="status-bar__dot" aria-hidden="true">·</span>
-      <span>batteria {Math.round(state.resources.battery)}%</span>
+      <span className={state.resources.battery < LOW_BATTERY ? 'status-bar__low' : undefined}>
+        batteria {Math.round(state.resources.battery)}%
+      </span>
       <span className="status-bar__dot" aria-hidden="true">·</span>
       <span>{NETWORK_LABEL[state.network]}</span>
       <span className="status-bar__dot" aria-hidden="true">·</span>

@@ -13,6 +13,11 @@ import { createInitialState, START_CLOCK_MINUTES, TOTAL_SECONDS } from './state'
 /** Punti percentuali di batteria consumati passivamente ogni secondo reale. */
 const BATTERY_DRAIN_PER_SECOND = 8 / 600; // ~8% nell'arco dei 10 minuti.
 
+/** Sotto questa carica lo schermo si oscura e vedere costa di più. */
+export const LOW_BATTERY = 20;
+/** Moltiplicatore del costo in tempo delle azioni a batteria scarica. */
+const LOW_BATTERY_PENALTY = 1.6;
+
 /**
  * reduce(state, action) -> { state, effects[] }
  * Funzione PURA e totale: è il solo punto in cui lo stato evolve.
@@ -131,7 +136,10 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
   }
 
   const spec = state.scenario.probes[probeId];
-  const secondsRemaining = Math.max(0, state.resources.secondsRemaining - spec.timeCost);
+  // Batteria scarica: fumbling al buio, vedere costa di più.
+  const lowBatt = state.resources.battery < LOW_BATTERY;
+  const timeCost = lowBatt ? Math.round(spec.timeCost * LOW_BATTERY_PENALTY) : spec.timeCost;
+  const secondsRemaining = Math.max(0, state.resources.secondsRemaining - timeCost);
   const battery = clampBattery(state.resources.battery - spec.batteryCost);
 
   const afterCost: GameState = {
@@ -171,8 +179,44 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
     applied = pushLine(s, text, probeId, s.mood);
   }
 
-  const ended = maybeEnd(applied.state);
-  return { state: ended.state, effects: [...preEffects, ...applied.effects, ...ended.effects] };
+  // Startle: un jumpscare a sorpresa può colpire mentre controlli (mai al calmo).
+  const startled = withStartle(applied.state, probeId);
+
+  const ended = maybeEnd(startled.state);
+  return {
+    state: ended.state,
+    effects: [...preEffects, ...applied.effects, ...startled.effects, ...ended.effects],
+  };
+}
+
+/**
+ * Spavento a sorpresa deterministico ma imprevedibile per il giocatore: un
+ * hash del contatore decide, con cooldown, se scatta. Puro (niente Math.random
+ * dentro reduce). Più probabile nel panico; mai quando sei calmo.
+ */
+function withStartle(state: GameState, probeId: ProbeId): ReduceResult {
+  if (state.mood === 'calm') return { state, effects: [] };
+  if (state.nextLogId - state.lastStartleId < 4) return { state, effects: [] };
+  const hash = (state.nextLogId * 2654435761) >>> 0;
+  const chance = state.mood === 'panic' ? 30 : 16;
+  if (hash % 100 >= chance) return { state, effects: [] };
+
+  const pool = state.scenario.startles[state.truth];
+  const text = pool[hash % pool.length] ?? '!';
+  const applied = pushLine(
+    { ...state, lastStartleId: state.nextLogId },
+    text,
+    probeId,
+    'panic',
+  );
+  return {
+    state: applied.state,
+    effects: [
+      ...applied.effects,
+      { type: 'SCARE', image: applied.state.image },
+      { type: 'HAPTIC', pattern: 'shock' },
+    ],
+  };
 }
 
 /** La scelta finale: chiude la partita con l'esito scelto. */
