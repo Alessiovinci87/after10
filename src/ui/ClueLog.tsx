@@ -30,7 +30,7 @@ export const ClueLog = memo(function ClueLog({ log }: { log: readonly LogEntry[]
       {log.map((entry) => (
         <p
           key={entry.id}
-          className={`clue-log__line clue-log__line--${entry.causedBy === 'time' ? 'time' : 'act'}`}
+          className={`clue-log__line clue-log__line--${entry.causedBy === 'time' ? 'time' : 'act'} clue-log__line--${entry.mood}`}
         >
           <span className="clue-log__time">{formatClock(entry.atMinutes)}</span>
           <span className="clue-log__text">{entry.text}</span>

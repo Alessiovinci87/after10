@@ -110,6 +110,42 @@ body {
   inset: 0;
   pointer-events: none;
   background: radial-gradient(120% 90% at 50% 45%, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+  transition: background 1.2s ease;
+}
+
+/* Pulsazione rossa: invisibile di norma, viva solo nel panico */
+.scene__pulse {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(120% 90% at 50% 55%, transparent 40%, rgba(120, 0, 0, 0.55) 100%);
+  transition: opacity 0.8s ease;
+}
+
+/* --- Intensità per umore --- */
+.mood--tense .scene__vignette {
+  background: radial-gradient(115% 85% at 50% 45%, transparent 38%, rgba(0, 0, 0, 0.9) 100%);
+}
+.mood--panic .scene__vignette {
+  background: radial-gradient(105% 80% at 50% 48%, transparent 30%, rgba(0, 0, 0, 0.95) 100%);
+}
+.mood--panic .scene__pulse {
+  opacity: 1;
+  animation: panic-pulse 1.15s ease-in-out infinite;
+}
+.mood--panic .scene__grain {
+  opacity: 0.11;
+  animation: grain 0.28s steps(3, end) infinite;
+}
+.mood--panic .scene__img {
+  animation: kenburns 22s ease-in-out infinite alternate, flicker 2.4s ease-in-out infinite;
+}
+
+@keyframes panic-pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 /* Scene tese/scure: leggero tremolio della luce */
@@ -331,6 +367,14 @@ body {
 .clue-log__line--time {
   color: var(--fg-mid);
   font-style: italic;
+}
+
+/* L'ultima riga tesa/di panico si accende appena */
+.clue-log__line--panic .clue-log__text {
+  color: #ff6b60;
+}
+.clue-log__line--tense .clue-log__text {
+  color: #e8d7d3;
 }
 
 .clue-log__time {
