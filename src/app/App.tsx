@@ -38,16 +38,11 @@ export function App() {
     );
   }
 
-  const currentMoment =
-    state.momentIndex >= 0
-      ? state.scenario.script[state.truth][state.momentIndex]
-      : undefined;
-
   return (
     <main className="os-shell">
       <StatusBar state={state} />
       <div className="stage-wrap">
-        <Scene scene={state.scene} image={currentMoment?.image} />
+        <Scene scene={state.scene} image={state.image} mood={state.mood} />
         <Timer state={state} />
       </div>
       <ClueLog log={state.log} />

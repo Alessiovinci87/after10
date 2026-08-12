@@ -30,21 +30,24 @@ describe('engine — stato iniziale', () => {
 });
 
 describe('engine — momenti nel tempo', () => {
-  it('il primo momento (t=0) si attiva al primo TICK e cambia scena', () => {
+  it('il primo beat a tempo (t=0) si attiva al primo TICK e allinea scena+immagine', () => {
     const s0 = fresh('intrusione');
     const { state } = reduce(s0, { type: 'TICK', deltaMs: 1000 });
+    const m0 = PIANEROTTOLO.script.intrusione[0];
     expect(state.momentIndex).toBe(0);
-    expect(state.scene).toBe(PIANEROTTOLO.script.intrusione[0]?.scene);
+    expect(state.scene).toBe(m0?.scene);
+    expect(state.image).toBe(m0?.image);
+    expect(state.mood).toBe(m0?.mood);
     expect(state.log).toHaveLength(1);
     expect(state.log[0]?.causedBy).toBe('time');
-    expect(state.log[0]?.text).toBe(PIANEROTTOLO.script.intrusione[0]?.ambient);
+    expect(state.log[0]?.text).toBe(m0?.text);
   });
 
-  it('un TICK grande attiva tutti i momenti già scaduti', () => {
+  it('un TICK grande attiva tutti i beat a tempo già scaduti', () => {
     const s0 = fresh('intrusione');
-    const { state } = reduce(s0, { type: 'TICK', deltaMs: 111_000 });
+    const { state } = reduce(s0, { type: 'TICK', deltaMs: 300_000 });
     expect(state.momentIndex).toBe(1);
-    expect(state.scene).toBe(PIANEROTTOLO.script.intrusione[1]?.scene);
+    expect(state.image).toBe(PIANEROTTOLO.script.intrusione[1]?.image);
     expect(state.log).toHaveLength(2);
     expect(state.log.every((e) => e.causedBy === 'time')).toBe(true);
   });
@@ -77,7 +80,8 @@ describe('engine — PROBE (azioni investigative)', () => {
     expect(state.resources.secondsRemaining).toBe(TOTAL_SECONDS - 8);
     expect(state.resources.battery).toBe(62);
     const reveal = state.log.find((e) => e.causedBy === 'peep');
-    expect(reveal?.text).toBe(PIANEROTTOLO.reveals.blackout.peep[0]);
+    expect(reveal?.text).toBe(PIANEROTTOLO.reveals.blackout.peep[0]?.text);
+    expect(state.image).toBe(PIANEROTTOLO.reveals.blackout.peep[0]?.image);
     expect(state.probeCounts.peep).toBe(1);
     expect(state.resources.knowledge).toBeGreaterThan(0);
     expect(effects.some((e) => e.type === 'CLUE')).toBe(true);
@@ -89,7 +93,7 @@ describe('engine — PROBE (azioni investigative)', () => {
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
     const peeps = s.log.filter((e) => e.causedBy === 'peep').map((e) => e.text);
-    expect(peeps).toEqual(PIANEROTTOLO.reveals.blackout.peep.slice(0, 3));
+    expect(peeps).toEqual(PIANEROTTOLO.reveals.blackout.peep.slice(0, 3).map((b) => b.text));
     expect(s.notice).toBeNull();
   });
 

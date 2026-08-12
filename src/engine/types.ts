@@ -14,159 +14,111 @@ export type DoorState = 'chiusa' | 'aperta' | 'socchiusa';
 /** Qualità della rete mostrata nella status bar. */
 export type NetworkState = 'assente' | 'debole' | 'buona';
 
-/**
- * Le 3 verità nascoste sulla stessa situazione del pianerottolo.
- * Il giocatore non la vede mai in chiaro finché non arriva al finale.
- */
+/** Le 3 verità nascoste sulla stessa situazione del pianerottolo. */
 export type Truth = 'blackout' | 'intrusione' | 'falso_allarme';
 
 /** Azioni "investigative" del giocatore che costano tempo. */
 export type ProbeId = 'peep' | 'search';
 
-/** Scena visiva mostrata dallo stage SVG (segue i momenti della storia). */
+/** Scena visiva (per il fallback vettoriale e le classi di intensità). */
 export type SceneId = 'idle' | 'calm' | 'dark' | 'figure' | 'torch' | 'door';
 
-/**
- * Risorse del gioco.
- * Tempo e Batteria sono VISIBILI; Sicurezza e Conoscenza sono NASCOSTE
- * (guidano gli esiti ma non compaiono nella UI).
- */
-export interface Resources {
-  /** Tempo residuo in secondi. Parte da 600 (10:00) e scorre fino a 0. */
-  readonly secondsRemaining: number;
-  /** Batteria del telefono in percentuale (0..100). Visibile. */
-  readonly battery: number;
-  /** Risorsa nascosta: quanto il giocatore è al sicuro. */
-  readonly security: number;
-  /** Risorsa nascosta: quanto il giocatore ha capito la situazione. */
-  readonly knowledge: number;
-}
-
-/** Fase della partita. */
-export type Phase = 'running' | 'ended';
-
-/** Perché la partita è finita. */
-export type EndReason = 'time_up';
+/** Umore del momento: guida l'intensità visiva e la vibrazione. */
+export type Mood = 'calm' | 'tense' | 'panic';
 
 /**
- * Un "momento" della storia: si attiva quando il tempo trascorso supera
- * `atSeconds`. Cambia la scena visibile, aggiunge una riga ambientale al
- * registro e ridefinisce cosa rivelano le azioni finché è quello corrente.
- * Così il contenuto evolve col tempo invece di esaurirsi.
+ * Un "beat" della storia: una riga di testo con la SUA scena e immagine, e il
+ * suo umore. Ogni volta che un beat compare (per azione o per tempo) la scena
+ * si aggiorna: così immagine e testo restano SEMPRE allineati.
  */
-export interface Moment {
-  /** Secondi trascorsi dall'inizio a cui il momento si attiva. */
-  readonly atSeconds: number;
+export interface Beat {
+  readonly text: string;
   readonly scene: SceneId;
-  /**
-   * Nome file (senza estensione) dell'immagine cinematografica in
-   * public/scenes/ (es. 'blk-1' → public/scenes/blk-1.webp). Se manca il file,
-   * si ripiega automaticamente sullo stage vettoriale della scena.
-   */
+  /** Nome file immagine in public/scenes/ (es. 'int-3' → int-3.webp). */
   readonly image?: string;
-  /** Riga che compare da sola nel registro quando il momento parte (a tempo). */
-  readonly ambient: string;
+  readonly mood: Mood;
 }
 
-/** Costo e resa di un'azione investigativa (i contenuti stanno nei momenti). */
+/** Un beat che scatta da solo quando il tempo raggiunge `atSeconds`. */
+export interface Moment extends Beat {
+  readonly atSeconds: number;
+}
+
+/** Costo e resa di un'azione investigativa (i contenuti stanno nei beat). */
 export interface ProbeSpec {
   readonly id: ProbeId;
   readonly label: string;
-  /** Costo in secondi sottratto al tempo residuo. */
   readonly timeCost: number;
-  /** Costo in punti percentuali di batteria. */
   readonly batteryCost: number;
-  /** Quanto fa salire la Conoscenza (nascosta) a ogni nuova scoperta. */
   readonly knowledgeGain: number;
-  /** Testo quando in questo momento hai già scoperto tutto. */
   readonly exhausted: string;
 }
 
-/**
- * Uno scenario è pura DATA (serializzabile): l'engine lo consulta senza
- * conoscerne il contenuto. Qui vive lo slice "Pianerottolo".
- */
+/** Scenario: pura DATA che l'engine consulta senza conoscerne il contenuto. */
 export interface Scenario {
   readonly id: string;
   readonly probes: Record<ProbeId, ProbeSpec>;
-  /** La sceneggiatura a tempo per ciascuna verità: scena + atmosfera. */
+  /** Beat a tempo (atmosfera che avanza anche senza agire). */
   readonly script: Record<Truth, readonly Moment[]>;
-  /**
-   * Le scoperte delle azioni: una coda ordinata per ogni azione e verità.
-   * Ogni tap consuma la successiva, così agire dà SEMPRE qualcosa di nuovo,
-   * indipendentemente dai momenti a tempo. Le azioni non sono più "bloccate"
-   * in attesa che scatti il momento seguente.
-   */
-  readonly reveals: Record<Truth, Record<ProbeId, readonly string[]>>;
-  /** Testo di chiusura per ciascuna verità, mostrato al finale. */
+  /** Le scoperte di ogni azione, in coda: ogni tap rivela il beat successivo. */
+  readonly reveals: Record<Truth, Record<ProbeId, readonly Beat[]>>;
   readonly endings: Record<Truth, string>;
 }
 
-/**
- * Voce del registro causale: cosa è stato osservato/fatto/successo e quando.
- * `causedBy` collega la conseguenza alla sua causa (per la timeline finale):
- * un'azione del giocatore, oppure il semplice scorrere del tempo.
- */
+/** Risorse del gioco: Tempo e Batteria visibili; Sicurezza e Conoscenza nascoste. */
+export interface Resources {
+  readonly secondsRemaining: number;
+  readonly battery: number;
+  readonly security: number;
+  readonly knowledge: number;
+}
+
+export type Phase = 'running' | 'ended';
+export type EndReason = 'time_up';
+
+/** Voce del registro causale: cosa è successo/è stato fatto, e quando. */
 export interface LogEntry {
   readonly id: number;
-  /** Orologio diegetico (minuti dalla mezzanotte) al momento della voce. */
   readonly atMinutes: number;
   readonly text: string;
   readonly causedBy: ProbeId | 'time';
+  readonly mood: Mood;
 }
 
-/**
- * Stato completo e serializzabile della partita.
- * Deve poter essere salvato/ripristinato as-is (nessuna funzione, nessuna ref).
- */
+/** Stato completo e serializzabile della partita. */
 export interface GameState {
   readonly phase: Phase;
   readonly endReason: EndReason | null;
   readonly resources: Resources;
-  /** Orologio diegetico mostrato nella status bar (minuti dalla mezzanotte). */
   readonly clockMinutes: number;
   readonly door: DoorState;
   readonly network: NetworkState;
-  /** La verità nascosta di questa partita. */
   readonly truth: Truth;
-  /** Dati dello scenario in corso (momenti, costi, finali). */
   readonly scenario: Scenario;
-  /** Indice del momento corrente nella sceneggiatura (-1 = non ancora partita). */
+  /** Indice del prossimo beat a tempo ancora da attivare. */
   readonly momentIndex: number;
-  /** Scena visiva corrente. */
+  /** Scena e immagine correnti (sempre allineate all'ultimo beat comparso). */
   readonly scene: SceneId;
-  /** Quante scoperte hai già fatto con ciascuna azione (cursore nelle code). */
+  readonly image: string | null;
+  readonly mood: Mood;
+  /** Cursore nelle code delle azioni. */
   readonly probeCounts: Record<ProbeId, number>;
-  /** Messaggio transitorio (es. "niente di nuovo"), fuori dal registro. */
   readonly notice: string | null;
-  /** Registro causale delle cose osservate/fatte/successe. */
   readonly log: readonly LogEntry[];
-  /** Contatore monotono per gli id delle voci di log. */
   readonly nextLogId: number;
 }
 
-/**
- * Azioni che l'engine sa ridurre.
- * - TICK: unica sorgente di avanzamento del tempo (soft real-time).
- * - PROBE: azione investigativa del giocatore (spioncino / cerca), costa tempo.
- * - RESET: ricomincia con una nuova verità (scelta dal driver, per restare puri).
- */
 export type Action =
   | { readonly type: 'TICK'; readonly deltaMs: number }
   | { readonly type: 'PROBE'; readonly probe: ProbeId }
   | { readonly type: 'RESET'; readonly truth: Truth };
 
-/**
- * Effetti: intenti verso il mondo esterno, prodotti dal reducer ma eseguiti
- * altrove. Mantenerli come dati (non callback) tiene l'engine puro e testabile.
- */
 export type Effect =
   | { readonly type: 'TIME_UP' }
   | { readonly type: 'HAPTIC'; readonly pattern: 'tap' | 'beat' | 'end' }
   | { readonly type: 'CLUE'; readonly text: string }
-  | { readonly type: 'BEAT'; readonly scene: SceneId };
+  | { readonly type: 'BEAT'; readonly scene: SceneId; readonly mood: Mood };
 
-/** Risultato di ogni riduzione. */
 export interface ReduceResult {
   readonly state: GameState;
   readonly effects: readonly Effect[];
