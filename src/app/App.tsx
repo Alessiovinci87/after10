@@ -46,7 +46,6 @@ export function App() {
         <Timer state={state} />
       </div>
       <ClueLog log={state.log} />
-      {state.notice && <p className="notice">{state.notice}</p>}
       <ActionBar probes={state.scenario.probes} onProbe={onProbe} />
     </main>
   );

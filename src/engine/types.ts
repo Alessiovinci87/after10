@@ -8,10 +8,7 @@
  * in cose del mondo reale (audio, salvataggi, vibrazione...).
  */
 
-/** Stato della porta d'ingresso. */
 export type DoorState = 'chiusa' | 'aperta' | 'socchiusa';
-
-/** Qualità della rete mostrata nella status bar. */
 export type NetworkState = 'assente' | 'debole' | 'buona';
 
 /** Le 3 verità nascoste sulla stessa situazione del pianerottolo. */
@@ -27,45 +24,48 @@ export type SceneId = 'idle' | 'calm' | 'dark' | 'figure' | 'torch' | 'door';
 export type Mood = 'calm' | 'tense' | 'panic';
 
 /**
- * Un "beat" della storia: una riga di testo con la SUA scena e immagine, e il
- * suo umore. Ogni volta che un beat compare (per azione o per tempo) la scena
- * si aggiorna: così immagine e testo restano SEMPRE allineati.
+ * Uno "stadio" della notte: la situazione a un certo istante. Guardare o
+ * cercare in questo stadio restituisce `peep`/`search` (lo stato ATTUALE della
+ * minaccia, non una lista che si esaurisce). Col tempo si passa allo stadio
+ * successivo e lo stato cambia. Ogni stadio porta scena, immagine e umore, così
+ * testo e foto restano allineati.
  */
-export interface Beat {
-  readonly text: string;
+export interface Stage {
+  /** Secondi trascorsi dall'inizio a cui lo stadio diventa quello corrente. */
+  readonly atSeconds: number;
   readonly scene: SceneId;
-  /** Nome file immagine in public/scenes/ (es. 'int-3' → int-3.webp). */
   readonly image?: string;
   readonly mood: Mood;
+  /** Riga che compare da sola quando lo stadio inizia (avanzamento a tempo). */
+  readonly ambient: string;
+  /** Cosa vedi allo spioncino, ORA. */
+  readonly peep: string;
+  /** Cosa trovi cercando in casa, ORA. */
+  readonly search: string;
 }
 
-/** Un beat che scatta da solo quando il tempo raggiunge `atSeconds`. */
-export interface Moment extends Beat {
-  readonly atSeconds: number;
-}
-
-/** Costo e resa di un'azione investigativa (i contenuti stanno nei beat). */
 export interface ProbeSpec {
   readonly id: ProbeId;
   readonly label: string;
   readonly timeCost: number;
   readonly batteryCost: number;
   readonly knowledgeGain: number;
-  readonly exhausted: string;
 }
 
 /** Scenario: pura DATA che l'engine consulta senza conoscerne il contenuto. */
 export interface Scenario {
   readonly id: string;
   readonly probes: Record<ProbeId, ProbeSpec>;
-  /** Beat a tempo (atmosfera che avanza anche senza agire). */
-  readonly script: Record<Truth, readonly Moment[]>;
-  /** Le scoperte di ogni azione, in coda: ogni tap rivela il beat successivo. */
-  readonly reveals: Record<Truth, Record<ProbeId, readonly Beat[]>>;
+  /** Gli stadi della notte per ciascuna verità, in ordine di tempo. */
+  readonly stages: Record<Truth, readonly Stage[]>;
+  /**
+   * Righe di "tensione" per quando controlli e non è cambiato nulla: variano
+   * per umore, così premere dà sempre atmosfera invece di un vicolo cieco.
+   */
+  readonly filler: Record<Mood, readonly string[]>;
   readonly endings: Record<Truth, string>;
 }
 
-/** Risorse del gioco: Tempo e Batteria visibili; Sicurezza e Conoscenza nascoste. */
 export interface Resources {
   readonly secondsRemaining: number;
   readonly battery: number;
@@ -76,7 +76,6 @@ export interface Resources {
 export type Phase = 'running' | 'ended';
 export type EndReason = 'time_up';
 
-/** Voce del registro causale: cosa è successo/è stato fatto, e quando. */
 export interface LogEntry {
   readonly id: number;
   readonly atMinutes: number;
@@ -85,7 +84,6 @@ export interface LogEntry {
   readonly mood: Mood;
 }
 
-/** Stato completo e serializzabile della partita. */
 export interface GameState {
   readonly phase: Phase;
   readonly endReason: EndReason | null;
@@ -95,15 +93,13 @@ export interface GameState {
   readonly network: NetworkState;
   readonly truth: Truth;
   readonly scenario: Scenario;
-  /** Indice del prossimo beat a tempo ancora da attivare. */
-  readonly momentIndex: number;
-  /** Scena e immagine correnti (sempre allineate all'ultimo beat comparso). */
+  /** Indice dello stadio corrente (-1 = non ancora iniziato). */
+  readonly stageIndex: number;
   readonly scene: SceneId;
   readonly image: string | null;
   readonly mood: Mood;
-  /** Cursore nelle code delle azioni. */
-  readonly probeCounts: Record<ProbeId, number>;
-  readonly notice: string | null;
+  /** Chiavi "probe:stadio" già mostrate in modo sostanziale. */
+  readonly seen: Record<string, boolean>;
   readonly log: readonly LogEntry[];
   readonly nextLogId: number;
 }

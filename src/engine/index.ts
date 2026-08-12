@@ -1,13 +1,11 @@
 /** Superficie pubblica dell'engine. React importa solo da qui. */
 export type {
   Action,
-  Beat,
   DoorState,
   Effect,
   EndReason,
   GameState,
   LogEntry,
-  Moment,
   Mood,
   NetworkState,
   Phase,
@@ -17,6 +15,7 @@ export type {
   Resources,
   Scenario,
   SceneId,
+  Stage,
   Truth,
 } from './types';
 export { reduce } from './reducer';
