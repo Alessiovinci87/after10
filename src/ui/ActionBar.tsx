@@ -4,18 +4,18 @@ import type { ProbeId, ProbeSpec } from '@engine/index';
 const PROBE_ORDER: readonly ProbeId[] = ['peep', 'search'];
 
 /**
- * Le azioni del giocatore. Ognuna costa tempo (mostrato in etichetta) e un po'
- * di batteria. Non si disabilitano: la scelta di "spendere secondi" è il gioco.
- *
- * Memoizzato: le specifiche delle azioni non cambiano coi tick, quindi la barra
- * non si ridisegna mentre scorre il tempo — i tap restano immediati.
+ * Le azioni del giocatore. Spioncino e Cerca costano tempo; Chiama aiuto costa
+ * molta batteria per poca speranza. Non si disabilitano: la scelta di spendere
+ * tempo/batteria È il gioco.
  */
 export const ActionBar = memo(function ActionBar({
   probes,
   onProbe,
+  onCall,
 }: {
   probes: Record<ProbeId, ProbeSpec>;
   onProbe: (probe: ProbeId) => void;
+  onCall: () => void;
 }) {
   return (
     <nav className="action-bar" aria-label="Azioni">
@@ -33,6 +33,10 @@ export const ActionBar = memo(function ActionBar({
           </button>
         );
       })}
+      <button type="button" className="action-bar__btn action-bar__btn--call" onClick={onCall}>
+        <span className="action-bar__label">Chiama aiuto</span>
+        <span className="action-bar__cost action-bar__cost--batt">−batteria</span>
+      </button>
     </nav>
   );
 });

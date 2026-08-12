@@ -179,6 +179,52 @@ describe('engine — pressione (M9)', () => {
   });
 });
 
+describe('engine — chiamata d\'aiuto (M10)', () => {
+  it('chiamare costa batteria e tempo, e registra un esito', () => {
+    let s = fresh('blackout');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 1000 }));
+    const b0 = s.resources.battery;
+    const t0 = s.resources.secondsRemaining;
+    const { state } = reduce(s, { type: 'CALL' });
+    expect(state.resources.battery).toBeLessThan(b0);
+    expect(state.resources.secondsRemaining).toBeLessThan(t0);
+    expect(state.callCount).toBe(1);
+    expect(state.log.some((e) => e.causedBy === 'call')).toBe(true);
+  });
+
+  it('con batteria troppo bassa il telefono non chiama', () => {
+    let s = fresh('intrusione');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 1000 }));
+    s = { ...s, resources: { ...s.resources, battery: 3 } };
+    const t0 = s.resources.secondsRemaining;
+    const { state } = reduce(s, { type: 'CALL' });
+    expect(state.callCount).toBe(0); // non conta come tentativo riuscito
+    expect(state.resources.secondsRemaining).toBe(t0); // nessun costo tempo
+    expect(state.log[state.log.length - 1]?.text).toBe(PIANEROTTOLO.callDead.intrusione);
+  });
+
+  it('chiamando abbastanza si raggiunge qualcuno (reachedHelp)', () => {
+    let s = fresh('blackout');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 1000 }));
+    // ricarica fittizia per poter chiamare più volte
+    for (let i = 0; i < PIANEROTTOLO.calls.blackout.length; i++) {
+      s = { ...s, resources: { ...s.resources, battery: 90 } };
+      ({ state: s } = reduce(s, { type: 'CALL' }));
+    }
+    expect(s.reachedHelp).toBe(true);
+  });
+
+  it('nell\'intrusione il secondo tentativo ti tradisce (SCARE)', () => {
+    let s = fresh('intrusione');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 1000 }));
+    s = { ...s, resources: { ...s.resources, battery: 90 } };
+    ({ state: s } = reduce(s, { type: 'CALL' })); // idx 0
+    s = { ...s, resources: { ...s.resources, battery: 90 } };
+    const r = reduce(s, { type: 'CALL' }); // idx 1 → "ti hanno sentito"
+    expect(r.effects.some((e) => e.type === 'SCARE')).toBe(true);
+  });
+});
+
 describe('engine — fine partita e RESET', () => {
   it('a 0 termina ed emette TIME_UP una sola volta', () => {
     let s = fresh();

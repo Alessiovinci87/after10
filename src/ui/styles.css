@@ -578,6 +578,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.action-bar__btn--call {
+  border-color: #2a3a4a;
+}
+.action-bar__cost--batt {
+  color: #ffb000;
+}
+
 /* ---- Finale ---- */
 .ending {
   flex: 1;
@@ -613,6 +620,12 @@ body {
   color: var(--fg-mid);
   font-size: 1.05rem;
   line-height: 1.55;
+}
+
+.ending__help {
+  margin-top: 0.9rem;
+  color: var(--fg-dim);
+  font-style: italic;
 }
 
 .ending__timeline {

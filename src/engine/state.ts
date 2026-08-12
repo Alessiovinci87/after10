@@ -34,6 +34,8 @@ export function createInitialState(scenario: Scenario, truth: Truth): GameState 
     decision: false,
     outcome: null,
     lastStartleId: 0,
+    callCount: 0,
+    reachedHelp: false,
     log: [],
     nextLogId: 1,
   };

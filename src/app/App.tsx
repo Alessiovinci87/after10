@@ -79,6 +79,13 @@ export function App() {
     [send],
   );
 
+  const onCall = useCallback(() => {
+    const audio = audioRef.current;
+    audio?.resume();
+    audio?.dial();
+    send({ type: 'CALL' });
+  }, [send]);
+
   const onChoose = useCallback(
     (choice: Outcome) => {
       audioRef.current?.resume();
@@ -162,7 +169,7 @@ export function App() {
           </div>
         </nav>
       ) : (
-        <ActionBar probes={state.scenario.probes} onProbe={onProbe} />
+        <ActionBar probes={state.scenario.probes} onProbe={onProbe} onCall={onCall} />
       )}
 
       {scare && (

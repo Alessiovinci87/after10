@@ -77,6 +77,10 @@ export interface Scenario {
   readonly filler: Record<Mood, readonly string[]>;
   /** Righe per i jumpscare "a sorpresa" (startle) durante le azioni. */
   readonly startles: Record<Truth, readonly string[]>;
+  /** Esiti della chiamata d'aiuto, in ordine (l'ultimo = un contatto reale). */
+  readonly calls: Record<Truth, readonly string[]>;
+  /** Riga quando la batteria è troppo bassa per chiamare. */
+  readonly callDead: Record<Truth, string>;
   readonly endings: Record<Truth, Endings>;
 }
 
@@ -94,7 +98,7 @@ export interface LogEntry {
   readonly id: number;
   readonly atMinutes: number;
   readonly text: string;
-  readonly causedBy: ProbeId | 'time';
+  readonly causedBy: ProbeId | 'time' | 'call';
   readonly mood: Mood;
 }
 
@@ -120,6 +124,10 @@ export interface GameState {
   readonly outcome: Outcome | null;
   /** Id dell'ultimo startle, per il cooldown tra spaventi a sorpresa. */
   readonly lastStartleId: number;
+  /** Quante volte hai provato a chiamare aiuto. */
+  readonly callCount: number;
+  /** true se a un certo punto sei riuscito a raggiungere qualcuno. */
+  readonly reachedHelp: boolean;
   readonly log: readonly LogEntry[];
   readonly nextLogId: number;
 }
@@ -127,6 +135,7 @@ export interface GameState {
 export type Action =
   | { readonly type: 'TICK'; readonly deltaMs: number }
   | { readonly type: 'PROBE'; readonly probe: ProbeId }
+  | { readonly type: 'CALL' }
   | { readonly type: 'CHOOSE'; readonly choice: Outcome }
   | { readonly type: 'RESET'; readonly truth: Truth };
 
