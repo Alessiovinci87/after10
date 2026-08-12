@@ -23,6 +23,8 @@ export function reduce(state: GameState, action: Action): ReduceResult {
       return tick(state, action.deltaMs);
     case 'PROBE':
       return probe(state, action.probe);
+    case 'CHOOSE':
+      return choose(state, action.choice);
     case 'RESET':
       return { state: createInitialState(state.scenario, action.truth), effects: [] };
     default:
@@ -98,12 +100,21 @@ function advanceStages(state: GameState): ReduceResult {
     s.stageIndex + 1 < stages.length &&
     (stages[s.stageIndex + 1]?.atSeconds ?? Infinity) <= elapsed
   ) {
-    const stage = stages[s.stageIndex + 1];
+    const nextIndex = s.stageIndex + 1;
+    const stage = stages[nextIndex];
     if (!stage) break;
-    const moved: GameState = { ...s, stageIndex: s.stageIndex + 1 };
+    const moved: GameState = { ...s, stageIndex: nextIndex };
     const applied = pushLine(moved, stage.ambient, 'time', stage.mood, stage.scene, stage.image ?? moved.image);
     s = applied.state;
     effects.push(...applied.effects);
+    if (stage.scare) {
+      effects.push({ type: 'SCARE', image: s.image }, { type: 'HAPTIC', pattern: 'shock' });
+    }
+    // Ultimo stadio: si sblocca la scelta finale (apri / resta).
+    if (nextIndex === stages.length - 1 && !s.decision) {
+      s = { ...s, decision: true };
+      effects.push({ type: 'DECISION' });
+    }
   }
 
   return { state: s, effects };
@@ -162,6 +173,17 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
 
   const ended = maybeEnd(applied.state);
   return { state: ended.state, effects: [...preEffects, ...applied.effects, ...ended.effects] };
+}
+
+/** La scelta finale: chiude la partita con l'esito scelto. */
+function choose(state: GameState, choice: 'open' | 'stay'): ReduceResult {
+  if (state.phase !== 'running' || !state.decision) {
+    return { state, effects: [] };
+  }
+  return {
+    state: { ...state, phase: 'ended', endReason: 'chose', outcome: choice },
+    effects: [{ type: 'HAPTIC', pattern: choice === 'open' ? 'shock' : 'end' }],
+  };
 }
 
 /** Se il tempo è esaurito, chiude la partita ed emette gli effetti del finale. */

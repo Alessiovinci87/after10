@@ -100,6 +100,22 @@ export class AudioEngine {
     if (mood === 'panic') this.stinger();
   }
 
+  /** Botta improvvisa del jumpscare: forte, sporca, immediata. */
+  shock(): void {
+    const c = this.ctx;
+    if (!c || !this.master) return;
+    this.noiseBurst(2600, 0.35, 0.5); // schianto ad ampio spettro
+    this.sweep(220, 32, 0.7, 0.4); // caduta grave
+    this.thump(140, 0.5);
+  }
+
+  /** Momento della scelta finale: sale la tensione, il cuore accelera. */
+  decision(): void {
+    this.mood = 'panic';
+    this.setMood('panic');
+    this.sweep(90, 130, 3.0, 0.12); // drone che sale, senza sollievo
+  }
+
   /** Ripristina l'atmosfera dopo un finale (es. dopo un RESET). */
   revive(): void {
     if (!this.ctx || !this.started) return;
