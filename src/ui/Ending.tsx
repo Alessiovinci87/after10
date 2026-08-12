@@ -20,6 +20,13 @@ export function Ending({ state, onRestart }: { state: GameState; onRestart: () =
       <p className="ending__clock">Sono le {formatClock(state.clockMinutes)}.</p>
       <h1 className="ending__truth">{TRUTH_LABEL[truth]}</h1>
       <p className="ending__text">{scenario.endings[truth][key]}</p>
+      {state.reachedHelp && (
+        <p className="ending__help">
+          {truth === 'intrusione' && outcome !== 'stay'
+            ? 'Le sirene arrivano. Troppo tardi.'
+            : 'Da fuori, lontane, le sirene. Non eri del tutto solo.'}
+        </p>
+      )}
 
       <div className="ending__timeline">
         <p className="ending__timeline-title">Cosa è successo</p>

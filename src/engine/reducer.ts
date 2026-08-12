@@ -28,6 +28,8 @@ export function reduce(state: GameState, action: Action): ReduceResult {
       return tick(state, action.deltaMs);
     case 'PROBE':
       return probe(state, action.probe);
+    case 'CALL':
+      return call(state);
     case 'CHOOSE':
       return choose(state, action.choice);
     case 'RESET':
@@ -41,7 +43,7 @@ export function reduce(state: GameState, action: Action): ReduceResult {
 function pushLine(
   state: GameState,
   text: string,
-  causedBy: ProbeId | 'time',
+  causedBy: LogEntry['causedBy'],
   mood: Mood,
   scene = state.scene,
   image = state.image,
@@ -217,6 +219,63 @@ function withStartle(state: GameState, probeId: ProbeId): ReduceResult {
       { type: 'HAPTIC', pattern: 'shock' },
     ],
   };
+}
+
+/** Secondi e batteria spesi per un tentativo di chiamata. */
+const CALL_TIME = 12;
+const CALL_BATTERY = 9;
+/** Sotto questa carica il telefono non riesce nemmeno a comporre. */
+const CALL_MIN_BATTERY = 6;
+
+/**
+ * Chiama aiuto: molta batteria per poca speranza. Spesso non risponde nessuno;
+ * se la batteria è troppo bassa il telefono muore. Nell'intrusione, parlare
+ * fa rumore: ti fanno sentire (jumpscare). L'ultimo esito raggiunge davvero
+ * qualcuno — ma l'aiuto è comunque lontano.
+ */
+function call(state: GameState): ReduceResult {
+  if (state.phase !== 'running') {
+    return { state, effects: [] };
+  }
+
+  // Batteria troppo bassa: niente chiamata.
+  if (state.resources.battery < CALL_MIN_BATTERY) {
+    const applied = pushLine(state, state.scenario.callDead[state.truth], 'call', 'panic');
+    return { state: applied.state, effects: [...applied.effects] };
+  }
+
+  const secondsRemaining = Math.max(0, state.resources.secondsRemaining - CALL_TIME);
+  const battery = clampBattery(state.resources.battery - CALL_BATTERY);
+  const afterCost: GameState = {
+    ...state,
+    clockMinutes: minutesFromRemaining(secondsRemaining),
+    resources: { ...state.resources, secondsRemaining, battery },
+  };
+
+  const advanced = advanceStages(afterCost);
+  const s = advanced.state;
+
+  const calls = s.scenario.calls[s.truth];
+  const idx = Math.min(s.callCount, calls.length - 1);
+  const text = calls[idx] ?? '…';
+  const reached = idx === calls.length - 1 ? true : s.reachedHelp;
+  const mood: Mood = s.truth === 'intrusione' ? 'panic' : 'tense';
+
+  const applied = pushLine(
+    { ...s, callCount: s.callCount + 1, reachedHelp: reached },
+    text,
+    'call',
+    mood,
+  );
+
+  const effects: Effect[] = [...advanced.effects, ...applied.effects];
+  // Nell'intrusione, il momento in cui sussurri l'indirizzo ti tradisce.
+  if (s.truth === 'intrusione' && idx === 1) {
+    effects.push({ type: 'SCARE', image: applied.state.image }, { type: 'HAPTIC', pattern: 'shock' });
+  }
+
+  const ended = maybeEnd(applied.state);
+  return { state: ended.state, effects: [...effects, ...ended.effects] };
 }
 
 /** La scelta finale: chiude la partita con l'esito scelto. */

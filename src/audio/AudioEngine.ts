@@ -116,6 +116,34 @@ export class AudioEngine {
     this.sweep(90, 130, 3.0, 0.12); // drone che sale, senza sollievo
   }
 
+  /** Suono di composizione + squillo della chiamata. */
+  dial(): void {
+    const c = this.ctx;
+    if (!c || !this.master) return;
+    // toni di composizione
+    [0, 120, 240].forEach((d, i) => setTimeout(() => this.beep(620 + i * 90, 0.09, 0.09), d));
+    // due squilli
+    setTimeout(() => this.beep(440, 0.4, 0.08), 500);
+    setTimeout(() => this.beep(440, 0.4, 0.08), 1100);
+  }
+
+  private beep(freq: number, dur: number, gain: number): void {
+    const c = this.ctx;
+    if (!c || !this.master) return;
+    const t = c.currentTime;
+    const o = c.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(this.master);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
   /** Ripristina l'atmosfera dopo un finale (es. dopo un RESET). */
   revive(): void {
     if (!this.ctx || !this.started) return;

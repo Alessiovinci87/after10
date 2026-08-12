@@ -149,6 +149,35 @@ const startles: Record<Truth, readonly string[]> = {
   ],
 };
 
+/** Esiti della chiamata d'aiuto, in ordine. L'ultimo raggiunge qualcuno. */
+const calls: Record<Truth, readonly string[]> = {
+  blackout: [
+    'Componi il 112. Un tono, poi: “tutte le linee sono occupate”. Il blackout ha intasato tutto.',
+    'Riprovi. Squilla a vuoto. Nessuno risponde.',
+    'Chiami un vicino. Parte la segreteria. Sei solo, per ora.',
+    'Finalmente un operatore: “È solo un guasto di rete, rientra a momenti.” Riattacchi, quasi deluso.',
+  ],
+  intrusione: [
+    'Componi il 112, la mano che trema. Squilla. Squilla. Nessuno risponde.',
+    'Sussurri l’indirizzo… Fuori, i passi si fermano di colpo. Ti hanno sentito.',
+    'La voce dell’operatore gracchia e si spezza. “…resti in linea…” Poi cade.',
+    '“Pattuglia in arrivo. Otto minuti.” Otto minuti. Tu ne hai molti meno.',
+  ],
+  falso_allarme: [
+    'Stai per chiamare il 112… poi ti fermi. E se fosse davvero niente?',
+    'Chiami un’amica. “Tutto ok? Sembri strana.” Forse esageri.',
+    'Riattacchi. Ti senti un po’ ridicola a chiamare per un tonfo.',
+    'Chiami il portiere. “Ah, ho spostato degli scatoloni prima, scusa!” Ecco spiegato.',
+  ],
+};
+
+/** Riga quando la batteria è troppo scarica per chiamare. */
+const callDead: Record<Truth, string> = {
+  blackout: 'Batteria troppo bassa. Lo schermo sfarfalla e si spegne. Niente chiamata.',
+  intrusione: 'Il telefono è quasi morto. Non parte nemmeno la chiamata. Sei solo con lui.',
+  falso_allarme: 'Batteria a terra. Meglio non sprecarla per una paura da niente.',
+};
+
 export const PIANEROTTOLO: Scenario = {
   id: 'pianerottolo',
   probes: {
@@ -158,6 +187,8 @@ export const PIANEROTTOLO: Scenario = {
   stages: { blackout, intrusione, falso_allarme },
   filler,
   startles,
+  calls,
+  callDead,
   endings: {
     blackout: {
       open: 'Apri. Sul pianerottolo c’è il vicino del quarto, torcia in mano. “Anche da te è saltata?” Ti senti uno stupido. Ma vivo.',
