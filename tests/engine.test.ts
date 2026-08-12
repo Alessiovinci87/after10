@@ -141,6 +141,44 @@ describe('engine — jumpscare e scelta finale', () => {
   });
 });
 
+describe('engine — pressione (M9)', () => {
+  it('a batteria scarica lo spioncino costa di più tempo', () => {
+    // Porta la batteria sotto la soglia col tempo, poi confronta il costo.
+    let s = fresh('falso_allarme');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 200_000 }));
+    // Forza batteria bassa mantenendo il resto dello stato coerente.
+    const low: typeof s = { ...s, resources: { ...s.resources, battery: 10 } };
+    const before = low.resources.secondsRemaining;
+    const { state } = reduce(low, { type: 'PROBE', probe: 'peep' });
+    // 8s * 1.6 = ~13s invece di 8.
+    expect(before - state.resources.secondsRemaining).toBeGreaterThan(8);
+  });
+
+  it('nel panico un startle può scattare, con SCARE e cooldown', () => {
+    let s = fresh('intrusione');
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 275_000 })); // stadio panico
+    let sawStartle = false;
+    for (let i = 0; i < 12 && !sawStartle; i++) {
+      const r = reduce(s, { type: 'PROBE', probe: 'peep' });
+      s = r.state;
+      if (r.effects.some((e) => e.type === 'SCARE')) sawStartle = true;
+    }
+    expect(sawStartle).toBe(true);
+  });
+
+  it('al calmo non scattano startle', () => {
+    let s = fresh('falso_allarme'); // stadio 0 tense... usa uno calmo
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 120_000 })); // stadio 1 = calm
+    let any = false;
+    for (let i = 0; i < 10; i++) {
+      const r = reduce(s, { type: 'PROBE', probe: 'peep' });
+      s = r.state;
+      if (s.mood === 'calm' && r.effects.some((e) => e.type === 'SCARE')) any = true;
+    }
+    expect(any).toBe(false);
+  });
+});
+
 describe('engine — fine partita e RESET', () => {
   it('a 0 termina ed emette TIME_UP una sola volta', () => {
     let s = fresh();

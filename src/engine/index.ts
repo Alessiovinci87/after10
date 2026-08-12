@@ -20,6 +20,6 @@ export type {
   Stage,
   Truth,
 } from './types';
-export { reduce } from './reducer';
+export { reduce, LOW_BATTERY } from './reducer';
 export { createInitialState, START_CLOCK_MINUTES, TOTAL_SECONDS } from './state';
 export { formatClock, formatTimer } from './format';

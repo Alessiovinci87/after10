@@ -33,6 +33,7 @@ export function createInitialState(scenario: Scenario, truth: Truth): GameState 
     seen: {},
     decision: false,
     outcome: null,
+    lastStartleId: 0,
     log: [],
     nextLogId: 1,
   };

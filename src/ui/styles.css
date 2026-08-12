@@ -63,6 +63,21 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.status-bar__low {
+  color: var(--urgent);
+  animation: pulse 1.4s steps(1, end) infinite;
+}
+
+/* Schermo che si oscura a batteria scarica (copre lo stage, non i tasti) */
+.low-battery {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: #000;
+  transition: opacity 0.6s ease;
+}
+
 /* ---- Jumpscare ---- */
 .jumpscare {
   position: fixed;

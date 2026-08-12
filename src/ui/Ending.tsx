@@ -13,7 +13,8 @@ const TRUTH_LABEL: Record<Truth, string> = {
 export function Ending({ state, onRestart }: { state: GameState; onRestart: () => void }) {
   const { truth, scenario, log, outcome } = state;
   const key = outcome ?? 'timeout';
-  const fatal = truth === 'intrusione' && outcome === 'open';
+  // Aprire durante un'intrusione, o esitare fino allo scadere: è fatale.
+  const fatal = truth === 'intrusione' && outcome !== 'stay';
   return (
     <div className={`ending${fatal ? ' ending--fatal' : ''}`} role="dialog" aria-label="Finale">
       <p className="ending__clock">Sono le {formatClock(state.clockMinutes)}.</p>

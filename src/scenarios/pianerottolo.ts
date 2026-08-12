@@ -133,6 +133,22 @@ const filler: Record<Mood, readonly string[]> = {
   ],
 };
 
+/** Righe dei jumpscare a sorpresa, per verità (alcuni sono falsi allarmi). */
+const startles: Record<Truth, readonly string[]> = {
+  blackout: [
+    'UN TONFO sulle scale! …poi il silenzio.',
+    'La luce di una torcia ti sferza lo spioncino!',
+  ],
+  intrusione: [
+    'UN COLPO violento alla porta! Il legno vibra.',
+    'Qualcosa RASCHIA la porta, dal basso verso l’alto.',
+  ],
+  falso_allarme: [
+    'UN BOTTO in cucina! …è solo un bicchiere caduto.',
+    'Lo sportello SBATTE! …è la corrente d’aria.',
+  ],
+};
+
 export const PIANEROTTOLO: Scenario = {
   id: 'pianerottolo',
   probes: {
@@ -141,6 +157,7 @@ export const PIANEROTTOLO: Scenario = {
   },
   stages: { blackout, intrusione, falso_allarme },
   filler,
+  startles,
   endings: {
     blackout: {
       open: 'Apri. Sul pianerottolo c’è il vicino del quarto, torcia in mano. “Anche da te è saltata?” Ti senti uno stupido. Ma vivo.',
@@ -150,7 +167,7 @@ export const PIANEROTTOLO: Scenario = {
     intrusione: {
       open: 'Apri la porta. L’ultima cosa che vedi è il suo sorriso, a un palmo dal tuo. Non dovevi aprire.',
       stay: 'Non apri. Il comò regge. I passi, alla fine, si allontanano. Sei vivo — tremante, madido, ma vivo.',
-      timeout: 'Le 22:51. La porta ha retto, per un soffio. Qualcuno era davvero là fuori. E tu eri a un centimetro da lui.',
+      timeout: 'Hai esitato troppo. La porta cede di colpo. Non fai in tempo nemmeno a urlare. L’indecisione ti è costata tutto.',
     },
     falso_allarme: {
       open: 'Apri, il cuore in gola. Il pianerottolo è vuoto. Certo che è vuoto. Non c’è mai stato niente.',

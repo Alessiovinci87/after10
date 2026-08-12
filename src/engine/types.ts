@@ -75,6 +75,8 @@ export interface Scenario {
    * per umore, così premere dà sempre atmosfera invece di un vicolo cieco.
    */
   readonly filler: Record<Mood, readonly string[]>;
+  /** Righe per i jumpscare "a sorpresa" (startle) durante le azioni. */
+  readonly startles: Record<Truth, readonly string[]>;
   readonly endings: Record<Truth, Endings>;
 }
 
@@ -116,6 +118,8 @@ export interface GameState {
   readonly decision: boolean;
   /** L'esito scelto dal giocatore (null = non ha ancora scelto). */
   readonly outcome: Outcome | null;
+  /** Id dell'ultimo startle, per il cooldown tra spaventi a sorpresa. */
+  readonly lastStartleId: number;
   readonly log: readonly LogEntry[];
   readonly nextLogId: number;
 }

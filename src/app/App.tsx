@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Effect, GameState, Outcome, ProbeId } from '@engine/index';
+import { LOW_BATTERY, type Effect, type GameState, type Outcome, type ProbeId } from '@engine/index';
 import { StatusBar } from '@ui/StatusBar';
 import { Timer } from '@ui/Timer';
 import { Scene } from '@ui/Scene';
@@ -140,6 +140,12 @@ export function App() {
       {audioButton}
       <div className="stage-wrap">
         <Scene scene={state.scene} image={state.image} mood={state.mood} />
+        {state.resources.battery < LOW_BATTERY && (
+          <div
+            className="low-battery"
+            style={{ opacity: Math.min(0.9, ((LOW_BATTERY - state.resources.battery) / LOW_BATTERY) * 0.9) }}
+          />
+        )}
         <Timer state={state} />
       </div>
       <ClueLog log={state.log} />
