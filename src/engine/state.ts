@@ -28,7 +28,7 @@ export function createInitialState(scenario: Scenario, truth: Truth): GameState 
     scenario,
     momentIndex: -1,
     scene: 'idle',
-    seen: {},
+    probeCounts: { peep: 0, search: 0 },
     notice: null,
     log: [],
     nextLogId: 1,

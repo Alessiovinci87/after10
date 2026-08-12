@@ -58,12 +58,14 @@ export interface Moment {
   /** Secondi trascorsi dall'inizio a cui il momento si attiva. */
   readonly atSeconds: number;
   readonly scene: SceneId;
-  /** Riga che compare da sola nel registro quando il momento parte. */
+  /**
+   * Nome file (senza estensione) dell'immagine cinematografica in
+   * public/scenes/ (es. 'blk-1' → public/scenes/blk-1.webp). Se manca il file,
+   * si ripiega automaticamente sullo stage vettoriale della scena.
+   */
+  readonly image?: string;
+  /** Riga che compare da sola nel registro quando il momento parte (a tempo). */
   readonly ambient: string;
-  /** Cosa rivela lo spioncino durante questo momento. */
-  readonly peep: string;
-  /** Cosa rivela la ricerca in casa durante questo momento. */
-  readonly search: string;
 }
 
 /** Costo e resa di un'azione investigativa (i contenuti stanno nei momenti). */
@@ -87,8 +89,15 @@ export interface ProbeSpec {
 export interface Scenario {
   readonly id: string;
   readonly probes: Record<ProbeId, ProbeSpec>;
-  /** La sceneggiatura per ciascuna verità: momenti in ordine di tempo. */
+  /** La sceneggiatura a tempo per ciascuna verità: scena + atmosfera. */
   readonly script: Record<Truth, readonly Moment[]>;
+  /**
+   * Le scoperte delle azioni: una coda ordinata per ogni azione e verità.
+   * Ogni tap consuma la successiva, così agire dà SEMPRE qualcosa di nuovo,
+   * indipendentemente dai momenti a tempo. Le azioni non sono più "bloccate"
+   * in attesa che scatti il momento seguente.
+   */
+  readonly reveals: Record<Truth, Record<ProbeId, readonly string[]>>;
   /** Testo di chiusura per ciascuna verità, mostrato al finale. */
   readonly endings: Record<Truth, string>;
 }
@@ -126,8 +135,8 @@ export interface GameState {
   readonly momentIndex: number;
   /** Scena visiva corrente. */
   readonly scene: SceneId;
-  /** Chiavi "probe:momento" già scoperte, per non ripetere gli indizi. */
-  readonly seen: Record<string, boolean>;
+  /** Quante scoperte hai già fatto con ciascuna azione (cursore nelle code). */
+  readonly probeCounts: Record<ProbeId, number>;
   /** Messaggio transitorio (es. "niente di nuovo"), fuori dal registro. */
   readonly notice: string | null;
   /** Registro causale delle cose osservate/fatte/successe. */

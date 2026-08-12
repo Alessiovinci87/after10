@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { Effect, GameState, ProbeId } from '@engine/index';
 import { StatusBar } from '@ui/StatusBar';
 import { Timer } from '@ui/Timer';
-import { SceneStage } from '@ui/SceneStage';
+import { Scene } from '@ui/Scene';
 import { ClueLog } from '@ui/ClueLog';
 import { ActionBar } from '@ui/ActionBar';
 import { Ending } from '@ui/Ending';
@@ -38,11 +38,16 @@ export function App() {
     );
   }
 
+  const currentMoment =
+    state.momentIndex >= 0
+      ? state.scenario.script[state.truth][state.momentIndex]
+      : undefined;
+
   return (
     <main className="os-shell">
       <StatusBar state={state} />
       <div className="stage-wrap">
-        <SceneStage scene={state.scene} />
+        <Scene scene={state.scene} image={currentMoment?.image} />
         <Timer state={state} />
       </div>
       <ClueLog log={state.log} />
