@@ -71,38 +71,39 @@ describe('engine — momenti nel tempo', () => {
 });
 
 describe('engine — PROBE (azioni investigative)', () => {
-  it('spioncino costa 8s + batteria e rivela il dettaglio del momento corrente', () => {
+  it('spioncino costa 8s + batteria e rivela la prima scoperta della coda', () => {
     const s0 = fresh('blackout');
     const { state, effects } = reduce(s0, { type: 'PROBE', probe: 'peep' });
     expect(state.resources.secondsRemaining).toBe(TOTAL_SECONDS - 8);
     expect(state.resources.battery).toBe(62);
     const reveal = state.log.find((e) => e.causedBy === 'peep');
-    expect(reveal?.text).toBe(PIANEROTTOLO.script.blackout[0]?.peep);
+    expect(reveal?.text).toBe(PIANEROTTOLO.reveals.blackout.peep[0]);
+    expect(state.probeCounts.peep).toBe(1);
     expect(state.resources.knowledge).toBeGreaterThan(0);
     expect(effects.some((e) => e.type === 'CLUE')).toBe(true);
   });
 
-  it('ripetere nello stesso momento non spamma: avviso transitorio, niente riga nuova', () => {
-    let s = fresh('falso_allarme');
-    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
-    const lenAfterFirst = s.log.length;
-    expect(s.notice).toBeNull();
-    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
-    expect(s.log.length).toBe(lenAfterFirst);
-    expect(s.notice).toBe(PIANEROTTOLO.probes.peep.exhausted);
-  });
-
-  it('col tempo lo stesso spioncino rivela cose nuove (contenuto che evolve)', () => {
+  it('ogni tap dà una scoperta nuova, subito (niente attesa dei momenti)', () => {
     let s = fresh('blackout');
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
-    const first = s.log.find((e) => e.causedBy === 'peep')?.text;
-    // Avanza oltre il secondo momento e riprova: nuovo dettaglio.
-    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 130_000 }));
+    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
     ({ state: s } = reduce(s, { type: 'PROBE', probe: 'peep' }));
     const peeps = s.log.filter((e) => e.causedBy === 'peep').map((e) => e.text);
-    expect(peeps).toHaveLength(2);
-    expect(peeps[1]).not.toBe(first);
-    expect(peeps[1]).toBe(PIANEROTTOLO.script.blackout[1]?.peep);
+    expect(peeps).toEqual(PIANEROTTOLO.reveals.blackout.peep.slice(0, 3));
+    expect(s.notice).toBeNull();
+  });
+
+  it('l\'avviso "esaurito" arriva solo dopo aver svuotato l\'intera coda', () => {
+    let s = fresh('falso_allarme');
+    const total = PIANEROTTOLO.reveals.falso_allarme.search.length;
+    for (let i = 0; i < total; i++) {
+      ({ state: s } = reduce(s, { type: 'PROBE', probe: 'search' }));
+      expect(s.notice).toBeNull();
+    }
+    const lenBefore = s.log.length;
+    ({ state: s } = reduce(s, { type: 'PROBE', probe: 'search' }));
+    expect(s.log.length).toBe(lenBefore);
+    expect(s.notice).toBe(PIANEROTTOLO.probes.search.exhausted);
   });
 
   it('un\'azione che sfora il tempo lo azzera e chiude la partita', () => {

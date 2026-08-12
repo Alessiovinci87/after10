@@ -85,27 +85,23 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
     notice: null,
   };
 
-  // Il tempo speso può aver fatto avanzare la storia.
+  // Il tempo speso può aver fatto avanzare l'atmosfera (scena + ambient).
   const advanced = advanceMoments(afterCost);
   const s = advanced.state;
 
-  const momentIndex = Math.max(0, s.momentIndex);
-  const script = s.scenario.script[s.truth];
-  const moment = script[momentIndex];
-  const key = `${probeId}:${momentIndex}`;
-
   const effects: Effect[] = [{ type: 'HAPTIC', pattern: 'tap' }, ...advanced.effects];
 
-  if (!moment) {
-    return { state: s, effects };
-  }
+  // Ogni azione pesca la scoperta successiva dalla propria coda: agire dà
+  // sempre qualcosa di nuovo, senza aspettare i momenti a tempo.
+  const queue = s.scenario.reveals[s.truth][probeId];
+  const cursor = s.probeCounts[probeId];
 
-  if (s.seen[key]) {
-    // Già scoperto in questo momento: avviso transitorio, nessuna riga nuova.
+  if (cursor >= queue.length) {
+    // Solo qui, esaurita l'intera coda dell'azione: avviso, niente riga nuova.
     return { state: { ...s, notice: spec.exhausted }, effects };
   }
 
-  const text = probeId === 'peep' ? moment.peep : moment.search;
+  const text = queue[cursor] ?? spec.exhausted;
   const entry: LogEntry = {
     id: s.nextLogId,
     atMinutes: s.clockMinutes,
@@ -119,7 +115,7 @@ function probe(state: GameState, probeId: ProbeId): ReduceResult {
       ...s.resources,
       knowledge: s.resources.knowledge + spec.knowledgeGain,
     },
-    seen: { ...s.seen, [key]: true },
+    probeCounts: { ...s.probeCounts, [probeId]: cursor + 1 },
     notice: null,
     log: [...s.log, entry],
     nextLogId: s.nextLogId + 1,
