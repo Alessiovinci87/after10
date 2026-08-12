@@ -113,6 +113,34 @@ describe('engine — PROBE (stato attuale, mai bloccato)', () => {
   });
 });
 
+describe('engine — jumpscare e scelta finale', () => {
+  it('entrare in uno stadio "scare" emette SCARE + HAPTIC shock', () => {
+    let s = fresh('intrusione');
+    // Stadio 3 (t=270) è scare (maniglia).
+    const r = reduce(s, { type: 'TICK', deltaMs: 275_000 });
+    s = r.state;
+    expect(r.effects.some((e) => e.type === 'SCARE')).toBe(true);
+    expect(r.effects.some((e) => e.type === 'HAPTIC' && e.pattern === 'shock')).toBe(true);
+  });
+
+  it('l\'ultimo stadio sblocca la decisione ed emette DECISION', () => {
+    const r = reduce(fresh('intrusione'), { type: 'TICK', deltaMs: 545_000 });
+    expect(r.state.decision).toBe(true);
+    expect(r.effects.some((e) => e.type === 'DECISION')).toBe(true);
+  });
+
+  it('CHOOSE è ignorato prima della decisione, poi chiude con l\'esito', () => {
+    let s = fresh('intrusione');
+    // Prima della decisione: nessun effetto.
+    expect(reduce(s, { type: 'CHOOSE', choice: 'open' }).state).toBe(s);
+    ({ state: s } = reduce(s, { type: 'TICK', deltaMs: 545_000 }));
+    const chosen = reduce(s, { type: 'CHOOSE', choice: 'open' });
+    expect(chosen.state.phase).toBe('ended');
+    expect(chosen.state.endReason).toBe('chose');
+    expect(chosen.state.outcome).toBe('open');
+  });
+});
+
 describe('engine — fine partita e RESET', () => {
   it('a 0 termina ed emette TIME_UP una sola volta', () => {
     let s = fresh();

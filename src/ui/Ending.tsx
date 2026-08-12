@@ -11,12 +11,14 @@ const TRUTH_LABEL: Record<Truth, string> = {
  * la timeline causale: cosa hai osservato, quando, e cosa ti è costato.
  */
 export function Ending({ state, onRestart }: { state: GameState; onRestart: () => void }) {
-  const { truth, scenario, log } = state;
+  const { truth, scenario, log, outcome } = state;
+  const key = outcome ?? 'timeout';
+  const fatal = truth === 'intrusione' && outcome === 'open';
   return (
-    <div className="ending" role="dialog" aria-label="Finale">
+    <div className={`ending${fatal ? ' ending--fatal' : ''}`} role="dialog" aria-label="Finale">
       <p className="ending__clock">Sono le {formatClock(state.clockMinutes)}.</p>
       <h1 className="ending__truth">{TRUTH_LABEL[truth]}</h1>
-      <p className="ending__text">{scenario.endings[truth]}</p>
+      <p className="ending__text">{scenario.endings[truth][key]}</p>
 
       <div className="ending__timeline">
         <p className="ending__timeline-title">Cosa è successo</p>

@@ -31,6 +31,8 @@ export function createInitialState(scenario: Scenario, truth: Truth): GameState 
     image: null,
     mood: 'calm',
     seen: {},
+    decision: false,
+    outcome: null,
     log: [],
     nextLogId: 1,
   };

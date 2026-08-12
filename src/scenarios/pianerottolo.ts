@@ -34,8 +34,8 @@ const blackout: readonly Stage[] = [
     ambient: 'In fondo alle scale si accende una torcia. Sale, lenta.',
     peep: 'Una sagoma con torcia sale piano. Sembra il vicino del quarto.',
     search: 'Cerchi la tua torcia. Al buio la mano trova solo cose fredde.' },
-  { atSeconds: T[3]!, scene: 'figure', image: 'blk-3', mood: 'panic',
-    ambient: 'I passi si fermano. Sul TUO pianerottolo.',
+  { atSeconds: T[3]!, scene: 'figure', image: 'blk-3', mood: 'panic', scare: true,
+    ambient: 'I passi si fermano. Sul TUO pianerottolo. Una luce filtra sotto la porta.',
     peep: 'La torcia è ferma davanti alla tua porta. Non respiri.',
     search: 'Trovata la torcia. Il fascio trema quanto la tua mano.' },
   { atSeconds: T[4]!, scene: 'door', image: 'blk-1', mood: 'calm',
@@ -65,8 +65,8 @@ const intrusione: readonly Stage[] = [
     ambient: 'Un fruscio oltre la porta. Come una manica sul legno.',
     peep: 'Un’ombra scivola via, a sinistra. Veloce.',
     search: 'Sul davanzale interno, un’impronta di scarpa. Bagnata. Fresca.' },
-  { atSeconds: T[3]!, scene: 'door', image: 'int-4', mood: 'panic',
-    ambient: 'La maniglia si abbassa piano. Poi risale.',
+  { atSeconds: T[3]!, scene: 'door', image: 'int-4', mood: 'panic', scare: true,
+    ambient: 'La maniglia si abbassa di colpo. Poi risale. Qualcuno è appena fuori.',
     peep: 'Una mano guantata prova la maniglia. La tua maniglia.',
     search: 'Chiamata persa delle 22:39, da un numero senza prefisso.' },
   { atSeconds: T[4]!, scene: 'figure', image: 'int-3', mood: 'panic',
@@ -77,8 +77,8 @@ const intrusione: readonly Stage[] = [
     ambient: 'Tre colpi alla porta. Lenti. Poi il silenzio, peggiore.',
     peep: 'Nessuno. Ma il tuo zerbino è spostato di traverso.',
     search: 'Spingi il comò contro la porta. Pesa, ma regge. Per ora.' },
-  { atSeconds: T[6]!, scene: 'figure', image: 'int-5', mood: 'panic',
-    ambient: 'Lo spioncino si oscura. Qualcosa lo copre da fuori.',
+  { atSeconds: T[6]!, scene: 'figure', image: 'int-5', mood: 'panic', scare: true,
+    ambient: 'Lo spioncino si oscura di colpo. Qualcosa lo copre da fuori.',
     peep: 'Nero. Poi uno spiraglio di luce: un occhio. Ti sta guardando.',
     search: 'Non c’è più niente da cercare. Solo la porta, tra te e lui.' },
 ];
@@ -92,10 +92,10 @@ const falso_allarme: readonly Stage[] = [
     ambient: 'Il frigo riparte con un ronzio. Il palazzo respira.',
     peep: 'Niente. Tappetino a posto, luce accesa.',
     search: 'Un quadro caduto in corridoio. Il chiodo ha ceduto. Tutto qui.' },
-  { atSeconds: T[2]!, scene: 'calm', image: 'fls-2', mood: 'tense',
-    ambient: 'Un rumore in cucina. Ti volti di scatto.',
+  { atSeconds: T[2]!, scene: 'calm', image: 'fls-2', mood: 'tense', scare: true,
+    ambient: 'Un fracasso in cucina! Ti volti di scatto, il cuore in gola.',
     peep: 'Un’ombra sulle scale. Si muove verso di te…',
-    search: 'La TV in stand-by. L’avevi lasciata accesa tu.' },
+    search: 'Solo una pila di piatti scivolata nel lavello. Nient’altro.' },
   { atSeconds: T[3]!, scene: 'calm', image: 'fls-3', mood: 'calm',
     ambient: 'Passi sulle scale. Normali. Una chiave nella toppa, di là.',
     peep: 'È la vicina, con le buste della spesa. Ti saluta senza vederti.',
@@ -142,12 +142,21 @@ export const PIANEROTTOLO: Scenario = {
   stages: { blackout, intrusione, falso_allarme },
   filler,
   endings: {
-    blackout:
-      'Era solo un blackout. Le scale erano buie, non pericolose. Hai passato dieci minuti a temere il nulla. O forse hai fatto bene a non aprire.',
-    intrusione:
-      'Qualcuno era davvero là fuori. Ogni secondo passato a capirlo era un secondo tolto alla fuga. Le 22:51 arrivano comunque.',
-    falso_allarme:
-      'Falso allarme. Nessun pericolo, mai stato. Resta la domanda: quanto sei disposto a spaventarti per un quadro che cade?',
+    blackout: {
+      open: 'Apri. Sul pianerottolo c’è il vicino del quarto, torcia in mano. “Anche da te è saltata?” Ti senti uno stupido. Ma vivo.',
+      stay: 'Non apri. Poco dopo la luce torna, di colpo. Era solo un blackout. Dieci minuti di paura per niente.',
+      timeout: 'La luce torna da sola. Era un blackout. Le scale erano buie, non pericolose. Hai temuto il nulla per dieci minuti.',
+    },
+    intrusione: {
+      open: 'Apri la porta. L’ultima cosa che vedi è il suo sorriso, a un palmo dal tuo. Non dovevi aprire.',
+      stay: 'Non apri. Il comò regge. I passi, alla fine, si allontanano. Sei vivo — tremante, madido, ma vivo.',
+      timeout: 'Le 22:51. La porta ha retto, per un soffio. Qualcuno era davvero là fuori. E tu eri a un centimetro da lui.',
+    },
+    falso_allarme: {
+      open: 'Apri, il cuore in gola. Il pianerottolo è vuoto. Certo che è vuoto. Non c’è mai stato niente.',
+      stay: 'Resti immobile fino alla fine. Non bussa nessuno. Non è mai successo niente. Solo la tua testa.',
+      timeout: 'Falso allarme. Nessun pericolo, mai stato. Resta la domanda: quanto ti fai spaventare da un quadro che cade?',
+    },
   },
 };
 

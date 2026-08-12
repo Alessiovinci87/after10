@@ -42,6 +42,18 @@ export interface Stage {
   readonly peep: string;
   /** Cosa trovi cercando in casa, ORA. */
   readonly search: string;
+  /** Se true, l'ingresso in questo stadio scatena un jumpscare. */
+  readonly scare?: boolean;
+}
+
+/** La scelta finale del giocatore quando il tempo sta per scadere. */
+export type Outcome = 'open' | 'stay';
+
+/** Testi di chiusura per ciascun esito. `timeout` = non ha scelto in tempo. */
+export interface Endings {
+  readonly open: string;
+  readonly stay: string;
+  readonly timeout: string;
 }
 
 export interface ProbeSpec {
@@ -63,7 +75,7 @@ export interface Scenario {
    * per umore, così premere dà sempre atmosfera invece di un vicolo cieco.
    */
   readonly filler: Record<Mood, readonly string[]>;
-  readonly endings: Record<Truth, string>;
+  readonly endings: Record<Truth, Endings>;
 }
 
 export interface Resources {
@@ -74,7 +86,7 @@ export interface Resources {
 }
 
 export type Phase = 'running' | 'ended';
-export type EndReason = 'time_up';
+export type EndReason = 'time_up' | 'chose';
 
 export interface LogEntry {
   readonly id: number;
@@ -100,6 +112,10 @@ export interface GameState {
   readonly mood: Mood;
   /** Chiavi "probe:stadio" già mostrate in modo sostanziale. */
   readonly seen: Record<string, boolean>;
+  /** true quando è disponibile la scelta finale (ultimo stadio). */
+  readonly decision: boolean;
+  /** L'esito scelto dal giocatore (null = non ha ancora scelto). */
+  readonly outcome: Outcome | null;
   readonly log: readonly LogEntry[];
   readonly nextLogId: number;
 }
@@ -107,13 +123,16 @@ export interface GameState {
 export type Action =
   | { readonly type: 'TICK'; readonly deltaMs: number }
   | { readonly type: 'PROBE'; readonly probe: ProbeId }
+  | { readonly type: 'CHOOSE'; readonly choice: Outcome }
   | { readonly type: 'RESET'; readonly truth: Truth };
 
 export type Effect =
   | { readonly type: 'TIME_UP' }
-  | { readonly type: 'HAPTIC'; readonly pattern: 'tap' | 'beat' | 'end' }
+  | { readonly type: 'HAPTIC'; readonly pattern: 'tap' | 'beat' | 'end' | 'shock' }
   | { readonly type: 'CLUE'; readonly text: string }
-  | { readonly type: 'BEAT'; readonly scene: SceneId; readonly mood: Mood };
+  | { readonly type: 'BEAT'; readonly scene: SceneId; readonly mood: Mood }
+  | { readonly type: 'SCARE'; readonly image: string | null }
+  | { readonly type: 'DECISION' };
 
 export interface ReduceResult {
   readonly state: GameState;
